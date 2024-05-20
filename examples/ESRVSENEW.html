@@ -46,7 +46,7 @@
 
         videoScreen.position.set(0, 2, -5);
         videoScreen.rotation.y = Math.PI;
-        videoScreen.scale.set(-.1, .1, .1);
+        videoScreen.scale.set(-0.1, 0.1, 0.1);
 
         const scene = new THREE.Scene();
         scene.add(videoScreen);
@@ -111,7 +111,7 @@
         loader.load('https://uploads-ssl.webflow.com/62585c8f3b855d70abac2fff/66464fdbb596dafdc5a82406_rtvse-asd.glb.txt', function (gltf) {
             court = gltf.scene;
             court.scale.set(0.1, 0.1, 0.1);
-            court.position.set(0, 0, -5); // Place court initially in front of the camera
+            court.position.set(0, 0, -1); // Place court initially in front of the camera
             scene.add(court);
 
             mixer = new THREE.AnimationMixer(court);
@@ -194,7 +194,7 @@
         }
 
         function createButton(color, onClick) {
-            const buttonGeometry = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+            const buttonGeometry = new THREE.BoxGeometry(0.1, 0.1, 0.1); // Smaller size
             const buttonMaterial = new THREE.MeshBasicMaterial({ color });
             const buttonMesh = new THREE.Mesh(buttonGeometry, buttonMaterial);
 
@@ -205,7 +205,7 @@
 
         function createStartButton() {
             const startButton = createButton(0x00ff00, startExperience);
-            startButton.position.set(0, 1, -2); // Adjust the position as needed
+            startButton.position.set(0, 0.1, -1); // In front of the user, on the floor
             scene.add(startButton);
         }
 
@@ -214,7 +214,7 @@
                 stopExperience();
                 startExperience();
             });
-            resetButton.position.set(0, 0.5, -2); // Adjust the position as needed
+            resetButton.position.set(0, 0.1, -1.2); // In front of the user, on the floor
             scene.add(resetButton);
         }
 
@@ -232,8 +232,8 @@
         }
 
         function onSessionStarted(session) {
-            session.requestReferenceSpace('viewer').then(function (referenceSpace) {
-                renderer.xr.setReferenceSpaceType('viewer');
+            session.requestReferenceSpace('local-floor').then(function (referenceSpace) {
+                renderer.xr.setReferenceSpaceType('local-floor');
                 renderer.xr.setReferenceSpace(referenceSpace);
                 session.requestAnimationFrame(onAnimationFrame);
             });
@@ -245,11 +245,11 @@
             if (viewerPose) {
                 const viewerPosition = viewerPose.transform.position;
                 const viewerRotation = viewerPose.transform.orientation;
-                const offset = new THREE.Vector3(0, 0, 0); // Adjust the offset for the court position
+                const offset = new THREE.Vector3(0, 0, -1); // In front of the user
                 offset.applyQuaternion(viewerRotation);
                 const spawnPoint = viewerPosition.clone().add(offset);
                 court.position.copy(spawnPoint);
-                court.position.y = 5; // Adjust height to be above the ground
+                court.position.y = 0; // On the floor
             }
             renderer.render(scene, camera);
             frame.session.requestAnimationFrame(onAnimationFrame);
