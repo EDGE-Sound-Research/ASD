@@ -21,12 +21,11 @@
         import * as THREE from 'three';
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
         import { ARButton } from 'three/addons/webxr/ARButton.js';
-        import { XRHandModelFactory } from 'three/addons/webxr/XRHandModelFactory.js';
+        import { XRControllerModelFactory } from 'three/addons/webxr/XRControllerModelFactory.js';
         import { OculusHandModel } from 'three/addons/webxr/OculusHandModel.js';
         import { OculusHandPointerModel } from 'three/addons/webxr/OculusHandPointerModel.js';
         import { createText } from 'three/addons/webxr/Text2D.js';
         import { World, System, Component, TagComponent, Types } from 'three/addons/libs/ecsy.module.js';
-        import { Interaction } from './three.interaction.min.js';
 
         class Object3D extends Component {}
         Object3D.schema = { object: { type: Types.Ref } };
@@ -39,12 +38,12 @@
                 this.queries.buttons.results.forEach(entity => {
                     const button = entity.getMutableComponent(Button);
                     const buttonMesh = entity.getComponent(Object3D).object;
-                    if (button.currState == 'none') {
+                    if (button.currState === 'none') {
                         buttonMesh.scale.set(1, 1, 1);
                     } else {
                         buttonMesh.scale.set(1.1, 1.1, 1.1);
                     }
-                    if (button.currState == 'pressed' && button.prevState != 'pressed') {
+                    if (button.currState === 'pressed' && button.prevState !== 'pressed') {
                         button.action();
                     }
                     button.prevState = button.currState;
@@ -108,7 +107,7 @@
                             const button = intersectingEntity.getMutableComponent(Button);
                             if (hp.isPinched()) {
                                 button.currState = 'pressed';
-                            } else if (button.currState != 'pressed') {
+                            } else if (button.currState !== 'pressed') {
                                 button.currState = 'hovered';
                             }
                         }
@@ -117,13 +116,13 @@
                             const object = intersectingEntity.getComponent(Object3D).object;
                             object.scale.set(1.1, 1.1, 1.1);
                             if (hp.isPinched()) {
-                                if (!hp.isAttached() && draggable.state != 'attached') {
+                                if (!hp.isAttached() && draggable.state !== 'attached') {
                                     draggable.state = 'to-be-attached';
                                     draggable.attachedPointer = hp;
                                     hp.setAttached(true);
                                 }
                             } else {
-                                if (hp.isAttached() && draggable.state == 'attached') {
+                                if (hp.isAttached() && draggable.state === 'attached') {
                                     draggable.state = 'to-be-detached';
                                     draggable.attachedPointer = null;
                                     hp.setAttached(false);
