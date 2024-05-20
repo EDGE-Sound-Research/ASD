@@ -7,15 +7,15 @@
     <script type="importmap">
         {
             "imports": {
-                "three": "../build/three.module.js",
-                "three/addons/": "./jsm/"
+                "three": "https://unpkg.com/three@0.137.5/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.137.5/examples/jsm/"
             }
         }
     </script>
 </head>
 <body>
     <button class="startButton" id="startButton1" disabled>Start Experience</button>
-    <button id="resetButton">Reset Experience</button>
+    <button id="resetButton" style="display: none;">Reset Experience</button>
     <script type="module">
         import * as THREE from 'three';
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -36,10 +36,9 @@
         class Button extends Component { }
 
         Button.schema = {
-            // button states: [none, hovered, pressed]
             currState: { type: Types.String, default: 'none' },
             prevState: { type: Types.String, default: 'none' },
-            action: { type: Types.Ref, default: () => { } }
+            action: { type: Types.Ref, default: () => {} }
         };
 
         class ButtonSystem extends System {
@@ -57,8 +56,6 @@
                         button.action();
                     }
 
-                    // preserve prevState, clear currState
-                    // HandRaySystem will update currState
                     button.prevState = button.currState;
                     button.currState = 'none';
                 });
@@ -117,8 +114,9 @@
 
         const world = new World();
         const clock = new THREE.Clock();
-        let camera, scene, renderer;
-        let mixer, court, videoTexture, video;
+        let camera, scene, renderer, mixer, court, video, videoTexture;
+        const audioSources = [];
+        let startButtonEnabled = false;
 
         init();
         animate();
@@ -189,15 +187,7 @@
             pbEntity.addComponent(Intersectable);
             pbEntity.addComponent(Object3D, { object: playButton });
             const pbAction = function () {
-                if (mixer) {
-                    mixer._actions.forEach(action => {
-                        action.paused = false;
-                    });
-                }
-                if (video) {
-                    video.play();
-                }
-                audioSources.forEach(audio => audio.play());
+                startExperience();
             };
             pbEntity.addComponent(Button, { action: pbAction });
 
@@ -205,15 +195,7 @@
             paEntity.addComponent(Intersectable);
             paEntity.addComponent(Object3D, { object: pauseButton });
             const paAction = function () {
-                if (mixer) {
-                    mixer._actions.forEach(action => {
-                        action.paused = true;
-                    });
-                }
-                if (video) {
-                    video.pause();
-                }
-                audioSources.forEach(audio => audio.pause());
+                pauseExperience();
             };
             paEntity.addComponent(Button, { action: paAction });
 
@@ -221,8 +203,7 @@
             rbEntity.addComponent(Intersectable);
             rbEntity.addComponent(Object3D, { object: restartButton });
             const rbAction = function () {
-                stopExperience();
-                startExperience();
+                restartExperience();
             };
             rbEntity.addComponent(Button, { action: rbAction });
 
@@ -261,7 +242,6 @@
                 const listener = new THREE.AudioListener();
                 camera.add(listener);
 
-                // Load audio
                 const audioUrls = [
                     'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/Ball_Stem.mp3',
                     'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/Player1_Stem.mp3',
@@ -274,7 +254,6 @@
                     'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/NetR_Stem.mp3'
                 ];
                 const modelIDs = ['1', '2', '3', '4', '5', '6', '7', 'basket1', 'basket2'];
-                const audioSources = [];
                 const audioLoader = new THREE.AudioLoader();
                 const nonSpatialAudioUrl = 'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/AllStar_Game_FOH.mp3';
                 const nonSpatialAudio = new THREE.Audio(listener);
@@ -319,7 +298,19 @@
                 const pointLight4 = new THREE.PointLight(0x0000FF, 0.4, 30);
                 pointLight4.position.set(10, 10, 0);
                 scene.add(pointLight4);
+
+                checkAllLoaded();
             });
+        }
+
+        function checkAllLoaded() {
+            if (!startButtonEnabled) {
+                startButtonEnabled = true;
+                const startButton1 = document.getElementById('startButton1');
+                if (startButton1) {
+                    startButton1.disabled = false;
+                }
+            }
         }
 
         function animate() {
@@ -332,6 +323,44 @@
             });
         }
 
+        function startExperience() {
+            if (mixer) {
+                mixer._actions.forEach(action => {
+                    action.paused = false;
+                    action.play();
+                });
+            }
+            audioSources.forEach(audio => {
+                if (!audio.isPlaying) {
+                    audio.play();
+                }
+            });
+            if (video && video.paused) {
+                video.play();
+            }
+            document.getElementById('resetButton').style.display = 'block';
+            document.querySelectorAll('.startButton').forEach(button => {
+                button.style.display = 'none';
+            });
+        }
+
+        function pauseExperience() {
+            if (mixer) {
+                mixer._actions.forEach(action => {
+                    action.paused = true;
+                });
+            }
+            audioSources.forEach(audio => audio.pause());
+            if (video && !video.paused) {
+                video.pause();
+            }
+        }
+
+        function restartExperience() {
+            stopExperience();
+            startExperience();
+        }
+
         function stopExperience() {
             if (mixer) {
                 mixer.stopAllAction();
@@ -341,30 +370,25 @@
                 });
             }
             audioSources.forEach(audio => audio.stop());
-            video.pause();
-            video.currentTime = 0;
-        }
-
-        function startExperience() {
-            if (mixer) {
-                mixer._actions.forEach(action => {
-                    action.reset();
-                    action.play();
-                });
+            if (video) {
+                video.pause();
+                video.currentTime = 0;
             }
-            audioSources.forEach(audio => audio.play());
-            video.play();
         }
 
-        document.getElementById('resetButton').addEventListener('click', () => {
-            stopExperience();
-            startExperience();
-        });
+        document.getElementById('resetButton').addEventListener('click', restartExperience);
 
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        document.getElementById('startButton1').addEventListener('click', startExperience);
+        document.addEventListener('visibilitychange', function () {
+            if (document.hidden) {
+                stopExperience();
+            }
         });
     </script>
 </body>
