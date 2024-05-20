@@ -80,56 +80,177 @@
             light.shadow.mapSize.set(4096, 4096);
             scene.add(light);
 
-const loader = new GLTFLoader();
-let mixer;
-loader.load('https://uploads-ssl.webflow.com/62585c8f3b855d70abac2fff/66464fdbb596dafdc5a82406_rtvse-asd.glb.txt', function (gltf) {
-    if (gltf && gltf.scene) {
-        court = gltf.scene;
-        court.scale.set(0.1, 0.1, 0.1); // Set the scale to 0.1 for AR
-        scene.add(court);
+function init() {
+    const container = document.createElement('div');
+    document.body.appendChild(container);
 
-        // Animation Mixer
-        mixer = new THREE.AnimationMixer(court);
-        gltf.animations.forEach((clip) => {
-            mixer.clipAction(clip).play();
-        });
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x444444);
+    scene.add(videoScreen);
 
-        court.traverse((child) => {
-            if (child.isMesh) {
-                const index = modelIDs.indexOf(child.name);
-                if (index !== -1) {
-                    audioLoader.load(audioUrls[index], (buffer) => {
-                        const audio = new THREE.PositionalAudio(listener);
-                        audio.setBuffer(buffer);
-                        audio.setRefDistance(1);
-                        audio.setDistanceModel('exponential');
-                        audio.setRolloffFactor(2.5);
-                        child.add(audio);
-                        audioSources.push(audio);
+    camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 10);
+    camera.position.set(0, 1.2, 0.3);
+    scene.add(camera);
 
-                        // Increment the loaded count and check if all audio is loaded
-                        audioLoadedCount++;
-                        if (audioLoadedCount === audioUrls.length) {
-                            allAudioLoaded = true;
-                            checkAllLoaded();
-                        }
-                    }, undefined, function (error) {
-                        console.error(`Error loading audio for model ${child.name}:`, error);
-                    });
+    const listener = new THREE.AudioListener();
+    camera.add(listener);
+
+    scene.add(new THREE.HemisphereLight(0xcccccc, 0x999999, 3));
+
+    const light = new THREE.DirectionalLight(0xffffff, 3);
+    light.position.set(0, 6, 0);
+    light.castShadow = true;
+    light.shadow.camera.top = 2;
+    light.shadow.camera.bottom = -2;
+    light.shadow.camera.right = 2;
+    light.shadow.camera.left = -2;
+    light.shadow.mapSize.set(4096, 4096);
+    scene.add(light);
+
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.xr.enabled = true;
+    renderer.xr.cameraAutoUpdate = false;
+
+    container.appendChild(renderer.domElement);
+
+    const sessionInit = { requiredFeatures: ['hand-tracking'] };
+    document.body.appendChild(ARButton.createButton(renderer, sessionInit));
+
+    const controller1 = renderer.xr.getController(0);
+    scene.add(controller1);
+
+    const controller2 = renderer.xr.getController(1);
+    scene.add(controller2);
+
+    const controllerModelFactory = new XRControllerModelFactory();
+
+    const controllerGrip1 = renderer.xr.getControllerGrip(0);
+    controllerGrip1.add(controllerModelFactory.createControllerModel(controllerGrip1));
+    scene.add(controllerGrip1);
+
+    const hand1 = renderer.xr.getHand(0);
+    hand1.add(new OculusHandModel(hand1));
+    const handPointer1 = new OculusHandPointerModel(hand1, controller1);
+    hand1.add(handPointer1);
+    scene.add(hand1);
+
+    const controllerGrip2 = renderer.xr.getControllerGrip(1);
+    controllerGrip2.add(controllerModelFactory.createControllerModel(controllerGrip2));
+    scene.add(controllerGrip2);
+
+    const hand2 = renderer.xr.getHand(1);
+    hand2.add(new OculusHandModel(hand2));
+    const handPointer2 = new OculusHandPointerModel(hand2, controller2);
+    hand2.add(handPointer2);
+    scene.add(hand2);
+
+    const floorGeometry = new THREE.PlaneGeometry(4, 4);
+    const floorMaterial = new THREE.MeshPhongMaterial({ color: 0x222222 });
+    const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+    floor.rotation.x = -Math.PI / 2;
+    floor.receiveShadow = true;
+    scene.add(floor);
+
+    const menuGeometry = new THREE.PlaneGeometry(0.24, 0.5);
+    const menuMaterial = new THREE.MeshPhongMaterial({ opacity: 0, transparent: true });
+    const menuMesh = new THREE.Mesh(menuGeometry, menuMaterial);
+    menuMesh.position.set(0.4, 1, -1);
+    menuMesh.rotation.y = -Math.PI / 12;
+    scene.add(menuMesh);
+
+    const resetButton = makeButtonMesh(0.2, 0.1, 0.01, 0x355c7d);
+    const resetButtonText = createText('reset', 0.06);
+    resetButton.add(resetButtonText);
+    resetButtonText.position.set(0, 0, 0.0051);
+    resetButton.position.set(0, -0.06, 0);
+    menuMesh.add(resetButton);
+
+    const exitButton = makeButtonMesh(0.2, 0.1, 0.01, 0xff0000);
+    const exitButtonText = createText('exit', 0.06);
+    exitButton.add(exitButtonText);
+    exitButtonText.position.set(0, 0, 0.0051);
+    exitButton.position.set(0, -0.18, 0);
+    menuMesh.add(exitButton);
+
+    const instructionText = createText('This is a WebXR Hands demo, please explore with hands.', 0.04);
+    instructionText.position.set(0, 1.6, -0.6);
+    scene.add(instructionText);
+
+    const exitText = createText('Exiting session...', 0.04);
+    exitText.position.set(0, 1.5, -0.6);
+    exitText.visible = false;
+    scene.add(exitText);
+
+    // Load the GLTF model
+    const loader = new GLTFLoader();
+    let mixer;
+    loader.load('https://uploads-ssl.webflow.com/62585c8f3b855d70abac2fff/66464fdbb596dafdc5a82406_rtvse-asd.glb.txt', function (gltf) {
+        if (gltf && gltf.scene) {
+            court = gltf.scene;
+            court.scale.set(0.1, 0.1, 0.1); // Set the scale to 0.1 for AR
+            scene.add(court);
+
+            // Animation Mixer
+            mixer = new THREE.AnimationMixer(court);
+            gltf.animations.forEach((clip) => {
+                mixer.clipAction(clip).play();
+            });
+
+            court.traverse((child) => {
+                if (child.isMesh) {
+                    const index = modelIDs.indexOf(child.name);
+                    if (index !== -1) {
+                        audioLoader.load(audioUrls[index], (buffer) => {
+                            const audio = new THREE.PositionalAudio(listener);
+                            audio.setBuffer(buffer);
+                            audio.setRefDistance(1);
+                            audio.setDistanceModel('exponential');
+                            audio.setRolloffFactor(2.5);
+                            child.add(audio);
+                            audioSources.push(audio);
+
+                            // Increment the loaded count and check if all audio is loaded
+                            audioLoadedCount++;
+                            if (audioLoadedCount === audioUrls.length) {
+                                allAudioLoaded = true;
+                                checkAllLoaded();
+                            }
+                        }, undefined, function (error) {
+                            console.error(`Error loading audio for model ${child.name}:`, error);
+                        });
+                    }
                 }
-            }
-        });
+            });
 
-        // Once the model is loaded, set the flag and check all resources
-        isGLBLoaded = true;
-        checkAllLoaded();
-    } else {
-        console.error('Failed to load GLTF model.');
+            // Once the model is loaded, set the flag and check all resources
+            isGLBLoaded = true;
+            checkAllLoaded();
+        } else {
+            console.error('Failed to load GLTF model.');
+        }
+    }, undefined, function (error) {
+        console.error('An error occurred while loading the GLTF model:', error);
+    });
+
+    window.addEventListener('resize', onWindowResize);
+}
+
+function checkAllLoaded() {
+    console.log(`GLB Loaded: ${isGLBLoaded}, Video Loaded: ${isVideoLoaded}, All Audio Loaded: ${allAudioLoaded}`);
+    if (isGLBLoaded && isVideoLoaded && allAudioLoaded) {
+        const startButton1 = document.getElementById('startButton1');
+        if (startButton1) {
+            startButton1.disabled = false;
+            console.log("Start Button 1 enabled.");
+        } else {
+            console.log("Start Button 1 not found!");
+        }
+        console.log("All assets loaded. Ready to start!");
     }
-}, undefined, function (error) {
-    console.error('An error occurred while loading the GLTF model:', error);
-});
-
+}
 
             // Video setup
             video = document.createElement('video');
