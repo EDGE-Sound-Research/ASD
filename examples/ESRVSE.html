@@ -237,94 +237,102 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
         }
         function stopExperience() {
-            if (mixer) {
-                mixer.stopAllAction(); // Stop all animations
-                mixer._actions.forEach(action => {
-                    action.stop();
-                    action.reset(); // Reset actions to their initial state
-                });
-            }
-            // Stop all audio
-            audioSources.forEach(audio => audio.stop());
-            // Pause and reset the video
-            video.pause();
-            video.currentTime = 0;
+    if (mixer) {
+        mixer.stopAllAction(); // Stop all animations
+        mixer._actions.forEach(action => {
+            action.stop();
+            action.reset(); // Reset actions to their initial state
+        });
+    }
+    // Stop all audio
+    audioSources.forEach(audio => {
+        if (audio.isPlaying) {
+            audio.stop();
         }
-        let experienceTimer;
-        const totalDuration = 120; // Or set this dynamically based on your animation duration
-        function startExperience() {
-            // Reset the timer
-            clearTimeout(experienceTimer);
-            experienceTimer = setTimeout(stopExperience, totalDuration * 1000);
-            // Restart animations
-            if (mixer) {
-                mixer.stopAllAction(); // Stop all current actions
-                mixer.update(0); // Reset time
-                mixer._actions.forEach(action => {
-                    action.reset(); // Reset action
-                    action.play(); // Restart the action
-                });
-            }
-            // Restart all audio
+    });
+    // Pause and reset the video
+    video.pause();
+    video.currentTime = 0;
+}
+
+function startExperience() {
+    // Reset the timer
+    clearTimeout(experienceTimer);
+    experienceTimer = setTimeout(stopExperience, totalDuration * 1000);
+    
+    // Restart animations
+    if (mixer) {
+        mixer.stopAllAction(); // Stop all current actions
+        mixer.update(0); // Reset time
+        mixer._actions.forEach(action => {
+            action.reset(); // Reset action
+            action.play(); // Restart the action
+        });
+    }
+
+    // Restart all audio
+    audioSources.forEach(audio => {
+        if (!audio.isPlaying) {
+            audio.play();
+        }
+    });
+
+    // Play the video
+    video.play();
+    animate(); // Start animation loop
+}
+
+document.getElementById('resetButton').addEventListener('click', () => {
+    stopExperience();
+    startExperience();
+});
+
+function startButtonFunctionality() {
+    document.querySelectorAll('.startButton').forEach(button => {
+        button.style.display = 'none';
+    });
+
+    const audioContext = THREE.AudioContext.getContext();
+    // Check if the audio context is suspended, then resume it
+    if (audioContext.state === 'suspended') {
+        audioContext.resume().then(() => {
+            console.log("Audio Context resumed successfully!");
+            // Play all audio sources after resuming the context
             audioSources.forEach(audio => {
                 if (!audio.isPlaying) {
                     audio.play();
                 }
             });
             // Play the video
-            const videoElement = document.getElementById('videoElement');
-            if (videoElement) {
-                videoElement.play();
-            } else {
-                video.play();
-            }
-            animate(); // Start animation loop
-        }
-        // HTML reset button functionality
-        document.getElementById('resetButton').addEventListener('click', () => {
-            stopExperience();
-            startExperience();
+            video.play();
+        }).catch(error => {
+            console.error("Error resuming audio context:", error);
         });
-        function startButtonFunctionality() {
-            document.querySelectorAll('.startButton').forEach(button => {
-                button.style.display = 'none';
-            });
-            const audioContext = THREE.AudioContext.getContext();
-            // Check if the audio context is suspended, then resume it
-            if (audioContext.state === 'suspended') {
-                audioContext.resume().then(() => {
-                    console.log("Audio Context resumed successfully!");
-                    // Play all audio sources after resuming the context
-                    audioSources.forEach(audio => {
-                        if (!audio.isPlaying) {
-                            audio.play();
-                        }
-                    });
-                    // Play the video
-                    video.play();
-                }).catch(error => {
-                    console.error("Error resuming audio context:", error);
-                });
-            } else {
-                // If not suspended, just play everything
-                audioSources.forEach(audio => {
-                    if (!audio.isPlaying) {
-                        audio.play();
-                    }
-                });
-                // Play the video
-                video.play();
-            }
-            startExperience();
-        }
-        // Start button click event listeners
-        document.getElementById('startButton1').addEventListener('click', startButtonFunctionality);
-        document.addEventListener('visibilitychange', function () {
-            if (document.hidden) {
-                stopExperience(); // Stop the experience when the tab is not in focus
+    } else {
+        // If not suspended, just play everything
+        audioSources.forEach(audio => {
+            if (!audio.isPlaying) {
+                audio.play();
             }
         });
-        window.addEventListener('resize', onWindowResize, false);
+        // Play the video
+        video.play();
+    }
+
+    startExperience();
+}
+
+// Start button click event listeners
+document.getElementById('startButton1').addEventListener('click', startButtonFunctionality);
+
+document.addEventListener('visibilitychange', function () {
+    if (document.hidden) {
+        stopExperience(); // Stop the experience when the tab is not in focus
+    }
+});
+
+window.addEventListener('resize', onWindowResize, false);
+
     </script>
 </body>
 </html>
