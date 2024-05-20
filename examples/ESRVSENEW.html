@@ -14,14 +14,10 @@
     </script>
 </head>
 <body>
-    <button class="startButton" id="startButton1" disabled>Start Experience</button>
-    <button id="resetButton">Reset Experience</button>
     <script type="module">
         import * as THREE from 'three';
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-        import { TransformControls } from 'three/addons/controls/TransformControls.js';
         import { XRButton } from 'three/addons/webxr/XRButton.js';
-        import { XRHandModelFactory } from 'three/addons/webxr/XRHandModelFactory.js';
         import { XRControllerModelFactory } from 'three/addons/webxr/XRControllerModelFactory.js';
 
         let isGLBLoaded = false;
@@ -29,6 +25,9 @@
         let allAudioLoaded = false;
         let audioLoadedCount = 0;
         let court;
+        const intersected = [];
+        const audioSources = [];
+        const audioLoader = new THREE.AudioLoader();
 
         const video = document.createElement('video');
         video.crossOrigin = "anonymous";
@@ -42,8 +41,8 @@
         videoTexture.format = THREE.RGBAFormat;
 
         const videoGeometry = new THREE.PlaneGeometry(4, 2.25);
-        const material = new THREE.MeshBasicMaterial({ map: videoTexture, side: THREE.DoubleSide });
-        const videoScreen = new THREE.Mesh(videoGeometry, material);
+        const videoMaterial = new THREE.MeshBasicMaterial({ map: videoTexture, side: THREE.DoubleSide });
+        const videoScreen = new THREE.Mesh(videoGeometry, videoMaterial);
 
         videoScreen.position.set(0, 2, -5);
         videoScreen.rotation.y = Math.PI;
@@ -58,7 +57,7 @@
 
         const listener = new THREE.AudioListener();
         const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 1000);
-        renderer.xr.setReferenceSpaceType('local-floor');
+        renderer.xr.setReferenceSpaceType('viewer');
         renderer.xr.enabled = true;
         document.body.appendChild(XRButton.createButton(renderer, { requiredFeatures: ['hit-test', 'depth-sensing'] }));
 
@@ -104,8 +103,6 @@
         ];
 
         const modelIDs = ['1', '2', '3', '4', '5', '6', '7', 'basket1', 'basket2'];
-        const audioSources = [];
-        const audioLoader = new THREE.AudioLoader();
 
         const loader = new GLTFLoader();
         let mixer;
@@ -179,13 +176,8 @@
         function checkAllLoaded() {
             console.log(`GLB Loaded: ${isGLBLoaded}, Video Loaded: ${isVideoLoaded}, All Audio Loaded: ${allAudioLoaded}`);
             if (isGLBLoaded && isVideoLoaded && allAudioLoaded) {
-                const startButton1 = document.getElementById('startButton1');
-                if (startButton1) {
-                    startButton1.disabled = false;
-                    console.log("Start Button 1 enabled.");
-                } else {
-                    console.log("Start Button 1 not found!");
-                }
+                createStartButton();
+                createResetButton();
                 console.log("All assets loaded. Ready to start!");
             }
         }
@@ -198,6 +190,91 @@
         if (video.readyState >= 4) {
             isVideoLoaded = true;
             checkAllLoaded();
+        }
+
+        function createButton(label, onClick) {
+            const buttonGeometry = new THREE.PlaneGeometry(0.5, 0.25);
+            const buttonMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00, side: THREE.DoubleSide });
+            const buttonMesh = new THREE.Mesh(buttonGeometry, buttonMaterial);
+
+            const buttonText = createText(label, 0.1);
+            buttonText.position.set(0, 0, 0.01);
+            buttonMesh.add(buttonText);
+
+            buttonMesh.userData.onClick = onClick;
+
+            return buttonMesh;
+        }
+
+        function createText(text, size) {
+            const loader = new THREE.FontLoader();
+            const font = loader.parse({
+                "type": "Font",
+                "data": {
+                    "familyName": "helvetiker",
+                    "ascender": 740,
+                    "descender": -210,
+                    "unitsPerEm": 1000,
+                    "glyphs": {
+                        "H": {
+                            "xMin": 32,
+                            "xMax": 668,
+                            "yMin": 0,
+                            "yMax": 700,
+                            "ha": 700,
+                            "o": "m 32 0 l 32 700 l 137 700 l 137 423 l 563 423 l 563 700 l 668 700 l 668 0 l 563 0 l 563 276 l 137 276 l 137 0 l 32 0 z "
+                        },
+                        "e": {
+                            "xMin": 25,
+                            "xMax": 509,
+                            "yMin": -10,
+                            "yMax": 524,
+                            "ha": 514,
+                            "o": "m 509 173 q 509 100 484 46 q 459 -8 403 -38 q 347 -10 290 17 q 25 127 39 347 l 146 347 q 144 304 163 278 q 183 252 238 252 q 279 252 346 292 q 379 382 439 506 q 509 173 z "
+                        },
+                        "l": {
+                            "xMin": 32,
+                            "xMax": 230,
+                            "yMin": 0,
+                            "yMax": 700,
+                            "ha": 264,
+                            "o": "m 32 0 l 32 700 l 137 700 l 137 0 l 32 0 z "
+                        },
+                        "o": {
+                            "xMin": 35,
+                            "xMax": 478,
+                            "yMin": -10,
+                            "yMax": 524,
+                            "ha": 514,
+                            "o": "m 35 257 q 35 457 108 534 q 181 610 339 634 q 437 544 478 339 q 432 104 288 -10 q 35 257 z "
+                        }
+                    }
+                }
+            });
+
+            const textGeometry = new THREE.TextGeometry(text, {
+                font: font,
+                size: size,
+                height: 0.02,
+                curveSegments: 12,
+            });
+            const textMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
+            return new THREE.Mesh(textGeometry, textMaterial);
+        }
+
+        function createStartButton() {
+            const startButton = createButton("Start", startExperience);
+            startButton.position.set(0, 1, -2); // Adjust the position as needed
+            scene.add(startButton);
+        }
+
+        function createResetButton() {
+            const resetButton = createButton("Reset", () => {
+                stopExperience();
+                startExperience();
+            });
+            resetButton.position.set(0, 0.5, -2); // Adjust the position as needed
+            scene.add(resetButton);
         }
 
         function animate() {
@@ -214,8 +291,8 @@
         }
 
         function onSessionStarted(session) {
-            session.requestReferenceSpace('local').then(function (referenceSpace) {
-                renderer.xr.setReferenceSpaceType('local');
+            session.requestReferenceSpace('viewer').then(function (referenceSpace) {
+                renderer.xr.setReferenceSpaceType('viewer');
                 renderer.xr.setReferenceSpace(referenceSpace);
                 session.requestAnimationFrame(onAnimationFrame);
             });
@@ -227,10 +304,10 @@
             if (viewerPose) {
                 const viewerPosition = viewerPose.transform.position;
                 const viewerRotation = viewerPose.transform.orientation;
-                const offset = new THREE.Vector3(0, -2, -2);
+                const offset = new THREE.Vector3(0, 1.5, -2); // Adjust the offset for the court position
                 offset.applyQuaternion(viewerRotation);
                 const spawnPoint = viewerPosition.clone().add(offset);
-                court.position.set(spawnPoint.x, spawnPoint.y + 1.5, spawnPoint.z - 1.5); // Offset the court
+                court.position.copy(spawnPoint);
             }
             renderer.render(scene, camera);
             frame.session.requestAnimationFrame(onAnimationFrame);
@@ -279,61 +356,52 @@
                 }
             });
 
-            const videoElement = document.getElementById('videoElement');
-            if (videoElement) {
-                videoElement.play();
-            } else {
-                video.play();
-            }
-
+            video.play();
             animate();
         }
 
-        document.getElementById('resetButton').addEventListener('click', () => {
-            stopExperience();
-            startExperience();
-        });
+        function intersectObjects(controller) {
+            const raycaster = new THREE.Raycaster();
+            const tempMatrix = new THREE.Matrix4();
+            const line = controller.getObjectByName('line');
 
-        function startButtonFunctionality() {
-            document.querySelectorAll('.startButton').forEach(button => {
-                button.style.display = 'none';
-            });
-            const audioContext = THREE.AudioContext.getContext();
-            if (audioContext.state === 'suspended') {
-                audioContext.resume().then(() => {
-                    console.log("Audio Context resumed successfully!");
-                    audioSources.forEach(audio => {
-                        if (!audio.isPlaying) {
-                            audio.play();
-                        }
-                    });
-                    video.play();
-                }).catch(error => {
-                    console.error("Error resuming audio context:", error);
-                });
-            } else {
-                audioSources.forEach(audio => {
-                    if (!audio.isPlaying) {
-                        audio.play();
+            if (line) {
+                tempMatrix.identity().extractRotation(controller.matrixWorld);
+                raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
+                raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
+
+                const intersects = raycaster.intersectObjects(scene.children);
+
+                if (intersects.length > 0) {
+                    const intersect = intersects[0];
+                    if (intersect.object.userData.onClick) {
+                        intersect.object.userData.onClick();
                     }
-                });
-                video.play();
+                }
             }
-            startExperience();
         }
 
-        document.getElementById('startButton1').addEventListener('click', startButtonFunctionality);
-        document.addEventListener('visibilitychange', function () {
-            if (document.hidden) {
-                stopExperience();
+        function handleController(controller) {
+            intersectObjects(controller);
+        }
+
+        function cleanIntersected() {
+            while (intersected.length) {
+                const object = intersected.pop();
+                if (object.material && object.material.emissive) {
+                    object.material.emissive.set(0x000000);
+                }
             }
+        }
+
+        renderer.setAnimationLoop(() => {
+            cleanIntersected();
+            handleController(renderer.xr.getController(0));
+            handleController(renderer.xr.getController(1));
+            renderer.render(scene, camera);
         });
 
-        window.addEventListener('resize', onWindowResize, false);
-
         const controllerModelFactory = new XRControllerModelFactory();
-        const handModelFactory = new XRHandModelFactory();
-
         const controller1 = renderer.xr.getController(0);
         scene.add(controller1);
 
@@ -357,47 +425,7 @@
         controller1.add(line.clone());
         controller2.add(line.clone());
 
-        const raycaster = new THREE.Raycaster();
-        const intersected = [];
-
-        function getIntersections(controller) {
-            controller.updateMatrixWorld();
-            raycaster.setFromCamera(controller.position, camera);
-            return raycaster.intersectObjects(scene.children);
-        }
-
-        function intersectObjects(controller) {
-            const line = controller.getObjectByName('line');
-            const intersections = getIntersections(controller);
-
-            if (intersections.length > 0) {
-                const intersection = intersections[0];
-                const object = intersection.object;
-                if (object.material && object.material.emissive) {
-                    object.material.emissive.set(0xff0000); // Highlight color
-                }
-                intersected.push(object);
-                line.scale.z = intersection.distance;
-            } else {
-                line.scale.z = 5;
-            }
-        }
-
-        function cleanIntersected() {
-            while (intersected.length) {
-                const object = intersected.pop();
-                if (object.material && object.material.emissive) {
-                    object.material.emissive.set(0x000000); // Reset color
-                }
-            }
-        }
-
-        renderer.setAnimationLoop(() => {
-            cleanIntersected();
-            intersectObjects(controller1);
-            intersectObjects(controller2);
-            renderer.render(scene, camera);
-        });
+        window.addEventListener('resize', onWindowResize, false);
     </script>
 </body>
 </html>
