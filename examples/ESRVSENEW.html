@@ -46,7 +46,7 @@
 
         videoScreen.position.set(0, 2, -5);
         videoScreen.rotation.y = Math.PI;
-        videoScreen.scale.set(-1, 1, 1);
+        videoScreen.scale.set(-.1, .1, .1);
 
         const scene = new THREE.Scene();
         scene.add(videoScreen);
@@ -245,11 +245,11 @@
             if (viewerPose) {
                 const viewerPosition = viewerPose.transform.position;
                 const viewerRotation = viewerPose.transform.orientation;
-                const offset = new THREE.Vector3(0, 0, -2); // Adjust the offset for the court position
+                const offset = new THREE.Vector3(0, 0, 0); // Adjust the offset for the court position
                 offset.applyQuaternion(viewerRotation);
                 const spawnPoint = viewerPosition.clone().add(offset);
                 court.position.copy(spawnPoint);
-                court.position.y = 1.5; // Adjust height to be above the ground
+                court.position.y = 5; // Adjust height to be above the ground
             }
             renderer.render(scene, camera);
             frame.session.requestAnimationFrame(onAnimationFrame);
