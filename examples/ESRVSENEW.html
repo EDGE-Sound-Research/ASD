@@ -19,8 +19,6 @@
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
         import { XRButton } from 'three/addons/webxr/XRButton.js';
         import { XRControllerModelFactory } from 'three/addons/webxr/XRControllerModelFactory.js';
-        import { FontLoader } from 'three/addons/loaders/FontLoader.js';
-        import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
 
         let isGLBLoaded = false;
         let isVideoLoaded = false;
@@ -195,88 +193,28 @@
             checkAllLoaded();
         }
 
-        function createButton(label, onClick) {
-            const buttonGeometry = new THREE.PlaneGeometry(0.5, 0.25);
-            const buttonMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00, side: THREE.DoubleSide });
+        function createButton(color, onClick) {
+            const buttonGeometry = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+            const buttonMaterial = new THREE.MeshBasicMaterial({ color });
             const buttonMesh = new THREE.Mesh(buttonGeometry, buttonMaterial);
-
-            const buttonText = createText(label, 0.1);
-            buttonText.position.set(-0.2, -0.05, 0.01);
-            buttonMesh.add(buttonText);
 
             buttonMesh.userData.onClick = onClick;
 
             return buttonMesh;
         }
 
-        function createText(text, size) {
-            const loader = new FontLoader();
-            const font = loader.parse({
-                "type": "Font",
-                "data": {
-                    "familyName": "helvetiker",
-                    "ascender": 740,
-                    "descender": -210,
-                    "unitsPerEm": 1000,
-                    "glyphs": {
-                        "H": {
-                            "xMin": 32,
-                            "xMax": 668,
-                            "yMin": 0,
-                            "yMax": 700,
-                            "ha": 700,
-                            "o": "m 32 0 l 32 700 l 137 700 l 137 423 l 563 423 l 563 700 l 668 700 l 668 0 l 563 0 l 563 276 l 137 276 l 137 0 l 32 0 z "
-                        },
-                        "e": {
-                            "xMin": 25,
-                            "xMax": 509,
-                            "yMin": -10,
-                            "yMax": 524,
-                            "ha": 514,
-                            "o": "m 509 173 q 509 100 484 46 q 459 -8 403 -38 q 347 -10 290 17 q 25 127 39 347 l 146 347 q 144 304 163 278 q 183 252 238 252 q 279 252 346 292 q 379 382 439 506 q 509 173 z "
-                        },
-                        "l": {
-                            "xMin": 32,
-                            "xMax": 230,
-                            "yMin": 0,
-                            "yMax": 700,
-                            "ha": 264,
-                            "o": "m 32 0 l 32 700 l 137 700 l 137 0 l 32 0 z "
-                        },
-                        "o": {
-                            "xMin": 35,
-                            "xMax": 478,
-                            "yMin": -10,
-                            "yMax": 524,
-                            "ha": 514,
-                            "o": "m 35 257 q 35 457 108 534 q 181 610 339 634 q 437 544 478 339 q 432 104 288 -10 q 35 257 z "
-                        }
-                    }
-                }
-            });
-
-            const textGeometry = new TextGeometry(text, {
-                font: font,
-                size: size,
-                height: 0.02,
-                curveSegments: 12,
-            });
-            const textMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
-            return new THREE.Mesh(textGeometry, textMaterial);
-        }
-
         function createStartButton() {
-            const startButton = createButton("Start", startExperience);
-            startButton.position.set(0, 0.5, -2); // Adjust the position as needed
+            const startButton = createButton(0x00ff00, startExperience);
+            startButton.position.set(0, 1, -2); // Adjust the position as needed
             scene.add(startButton);
         }
 
         function createResetButton() {
-            const resetButton = createButton("Reset", () => {
+            const resetButton = createButton(0xff0000, () => {
                 stopExperience();
                 startExperience();
             });
-            resetButton.position.set(0, 0, -2); // Adjust the position as needed
+            resetButton.position.set(0, 0.5, -2); // Adjust the position as needed
             scene.add(resetButton);
         }
 
