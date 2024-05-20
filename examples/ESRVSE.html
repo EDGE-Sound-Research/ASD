@@ -24,10 +24,8 @@
         import { XRHandModelFactory } from 'three/addons/webxr/XRHandModelFactory.js';
         import { XRControllerModelFactory } from 'three/addons/webxr/XRControllerModelFactory.js';
 
-        let container;
         let camera, scene, renderer;
-        let controller1, controller2, line;
-        let controllerGrip1, controllerGrip2;
+        let controller1, controller2, controllerGrip1, controllerGrip2;
         let controls, court, mixer;
         const audioSources = [];
         const clock = new THREE.Clock();
@@ -41,8 +39,7 @@
         const video = document.createElement('video');
         video.crossOrigin = "anonymous";
         video.preload = 'auto';
-        video.load();
-        video.muted = true;
+        video.src = 'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/NBA_AllStar_Demo_Clip%20(2).mp4';
         const videoTexture = new THREE.VideoTexture(video);
         const geometry = new THREE.PlaneGeometry(4, 2.25);
         const material = new THREE.MeshBasicMaterial({ map: videoTexture, side: THREE.DoubleSide });
@@ -111,20 +108,34 @@
         });
 
         // HAND TRACKING SETUP
+        const handModelFactory = new XRHandModelFactory();
         controller1 = renderer.xr.getController(0);
-        controller2 = renderer.xr.getController(1);
-        const controllerModelFactory = new XRControllerModelFactory();
-        controllerGrip1 = renderer.xr.getControllerGrip(0);
-        controllerGrip1.add(controllerModelFactory.createControllerModel(controllerGrip1));
-        controllerGrip2 = renderer.xr.getControllerGrip(1);
-        controllerGrip2.add(controllerModelFactory.createControllerModel(controllerGrip2));
+        controller1.addEventListener('selectstart', onSelectStart);
+        controller1.addEventListener('selectend', onSelectEnd);
+        controller1.addEventListener('squeezestart', onSqueezeStart);
+        controller1.addEventListener('squeezeend', onSqueezeEnd);
+        controller1.userData.isSelecting = false;
         scene.add(controller1);
+
+        controller2 = renderer.xr.getController(1);
+        controller2.addEventListener('selectstart', onSelectStart);
+        controller2.addEventListener('selectend', onSelectEnd);
+        controller2.addEventListener('squeezestart', onSqueezeStart);
+        controller2.addEventListener('squeezeend', onSqueezeEnd);
+        controller2.userData.isSelecting = false;
         scene.add(controller2);
+
+        controllerGrip1 = renderer.xr.getControllerGrip(0);
+        controllerGrip1.add(handModelFactory.createHandModel(controllerGrip1));
         scene.add(controllerGrip1);
+
+        controllerGrip2 = renderer.xr.getControllerGrip(1);
+        controllerGrip2.add(handModelFactory.createHandModel(controllerGrip2));
         scene.add(controllerGrip2);
 
         // TRANSFORM CONTROLS
         controls = new TransformControls(camera, renderer.domElement);
+        controls.addEventListener('change', () => renderer.render(scene, camera));
         controls.attach(court);
         scene.add(controls);
 
@@ -179,7 +190,7 @@
                 audioSources.forEach(audio => audio.play());
                 video.play();
             }
-            animate();
+            startExperience();
         }
 
         function resetExperience() {
@@ -230,6 +241,43 @@
         }
 
         window.addEventListener('resize', onWindowResize, false);
+
+        function onSelectStart(event) {
+            const controller = event.target;
+            const intersections = getIntersections(controller);
+            if (intersections.length > 0) {
+                const intersection = intersections[0];
+                const object = intersection.object;
+                controls.attach(object);
+                controller.userData.selected = object;
+            }
+        }
+
+        function onSelectEnd(event) {
+            const controller = event.target;
+            if (controller.userData.selected !== undefined) {
+                controls.detach();
+                controller.userData.selected = undefined;
+            }
+        }
+
+        function onSqueezeStart(event) {
+            const controller = event.target;
+            controller.userData.isSelecting = true;
+        }
+
+        function onSqueezeEnd(event) {
+            const controller = event.target;
+            controller.userData.isSelecting = false;
+        }
+
+        function getIntersections(controller) {
+            const tempMatrix = new THREE.Matrix4();
+            tempMatrix.identity().extractRotation(controller.matrixWorld);
+            raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
+            raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
+            return raycaster.intersectObjects(scene.children);
+        }
     </script>
 </body>
 </html>
