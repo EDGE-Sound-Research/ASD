@@ -111,7 +111,7 @@
         loader.load('https://uploads-ssl.webflow.com/62585c8f3b855d70abac2fff/66464fdbb596dafdc5a82406_rtvse-asd.glb.txt', function (gltf) {
             court = gltf.scene;
             court.scale.set(0.1, 0.1, 0.1);
-            court.position.set(0, 1, -1); // Place court initially in front of the camera
+            court.position.set(0, .5, -1); // Place court initially in front of the camera
             scene.add(court);
 
             mixer = new THREE.AnimationMixer(court);
@@ -173,6 +173,7 @@
         scene.add(pointLight3);
         const pointLight4 = new THREE.PointLight(0x0000FF, 0.4, 30);
         pointLight4.position.set(10, 10, 0);
+        scene.add(pointLight4);
 
         function checkAllLoaded() {
             console.log(`GLB Loaded: ${isGLBLoaded}, Video Loaded: ${isVideoLoaded}, All Audio Loaded: ${allAudioLoaded}`);
@@ -199,13 +200,14 @@
             const buttonMesh = new THREE.Mesh(buttonGeometry, buttonMaterial);
 
             buttonMesh.userData.onClick = onClick;
+            buttonMesh.userData.originalColor = color;
 
             return buttonMesh;
         }
 
         function createStartButton() {
             const startButton = createButton(0x00ff00, startExperience);
-            startButton.position.set(0, 0.1, -1); // In front of the user, on the floor
+            startButton.position.set(0, 0.5, -.5); // In front of the user, on the floor
             scene.add(startButton);
         }
 
@@ -214,7 +216,7 @@
                 stopExperience();
                 startExperience();
             });
-            resetButton.position.set(0, 0.1, -1.2); // In front of the user, on the floor
+            resetButton.position.set(0, 0.5, -.3); // In front of the user, on the floor
             scene.add(resetButton);
         }
 
@@ -305,20 +307,17 @@
         function intersectObjects(controller) {
             const raycaster = new THREE.Raycaster();
             const tempMatrix = new THREE.Matrix4();
-            const line = controller.getObjectByName('line');
+            tempMatrix.identity().extractRotation(controller.matrixWorld);
+            raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
+            raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
 
-            if (line) {
-                tempMatrix.identity().extractRotation(controller.matrixWorld);
-                raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
-                raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
+            const intersects = raycaster.intersectObjects(scene.children);
 
-                const intersects = raycaster.intersectObjects(scene.children);
-
-                if (intersects.length > 0) {
-                    const intersect = intersects[0];
-                    if (intersect.object.userData.onClick) {
-                        intersect.object.userData.onClick();
-                    }
+            if (intersects.length > 0) {
+                const intersect = intersects[0];
+                if (intersect.object.userData.onClick) {
+                    intersect.object.material.emissive.set(0x0000ff); // Hover color
+                    intersect.object.userData.onClick();
                 }
             }
         }
@@ -331,7 +330,7 @@
             while (intersected.length) {
                 const object = intersected.pop();
                 if (object.material && object.material.emissive) {
-                    object.material.emissive.set(0x000000);
+                    object.material.emissive.set(object.userData.originalColor); // Restore original color
                 }
             }
         }
@@ -357,15 +356,6 @@
         const controllerGrip2 = renderer.xr.getControllerGrip(1);
         controllerGrip2.add(controllerModelFactory.createControllerModel(controllerGrip2));
         scene.add(controllerGrip2);
-
-        const lineGeometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -1)]);
-        const lineMaterial = new THREE.LineBasicMaterial({ color: 0xff0000 });
-        const line = new THREE.Line(lineGeometry, lineMaterial);
-        line.name = 'line';
-        line.scale.z = 5;
-
-        controller1.add(line.clone());
-        controller2.add(line.clone());
 
         window.addEventListener('resize', onWindowResize, false);
     </script>
