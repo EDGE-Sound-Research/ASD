@@ -45,7 +45,7 @@
 		let isVideoLoaded = false;
 		let allAudioLoaded = false;
 		let audioLoadedCount = 0;
-		let court;
+		
 
 
         init();
@@ -80,7 +80,6 @@
             light.shadow.mapSize.set(4096, 4096);
             scene.add(light);
 
-// Load the GLTF model with animations
 const loader = new GLTFLoader();
 let mixer;
 loader.load('https://uploads-ssl.webflow.com/62585c8f3b855d70abac2fff/66464fdbb596dafdc5a82406_rtvse-asd.glb.txt', function (gltf) {
@@ -131,15 +130,6 @@ loader.load('https://uploads-ssl.webflow.com/62585c8f3b855d70abac2fff/66464fdbb5
     console.error('An error occurred while loading the GLTF model:', error);
 });
 
-        // Once the model is loaded, set the flag and check all resources
-        isGLBLoaded = true;
-        checkAllLoaded();
-    } else {
-        console.error('Failed to load GLTF model.');
-    }
-}, undefined, function (error) {
-    console.error('An error occurred while loading the GLTF model:', error);
-});
 
             // Video setup
             video = document.createElement('video');
