@@ -20,7 +20,7 @@
         import * as THREE from 'three';
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
         import { TransformControls } from 'three/addons/controls/TransformControls.js';
-        import { XRButton } from 'three/addons/webxr/XRButton.js';
+        import { ARButton } from 'three/addons/webxr/ARButton.js';
         import { XRHandModelFactory } from 'three/addons/webxr/XRHandModelFactory.js';
         let isGLBLoaded = false;
         let isVideoLoaded = false;
@@ -56,7 +56,7 @@
         const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 1000);
         renderer.xr.setReferenceSpaceType('local-floor'); // or 'local-floor' based on your needs
         renderer.xr.enabled = true;
-        document.body.appendChild(XRButton.createButton(renderer, { requiredFeatures: ['hit-test'] }));
+        document.body.appendChild(ARButton.createButton(renderer, { requiredFeatures: ['hit-test'] }));
         scene.background = null;
         // Set initial camera position and rotation to match the "center" position
         const initialCameraPosition = new THREE.Vector3(0, 2, 6); // Center position
