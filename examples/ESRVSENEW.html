@@ -24,7 +24,7 @@
         import { XRControllerModelFactory } from 'three/addons/webxr/XRControllerModelFactory.js';
         import { XRHandModelFactory } from 'three/addons/webxr/XRHandModelFactory.js';
 
-        let camera, scene, renderer, listener;
+        let camera, scene, renderer, listener, video, videoTexture;
         let controller1, controller2;
         let controllerGrip1, controllerGrip2;
         let raycaster;
@@ -166,15 +166,31 @@
                 console.error('An error happened during the loading of the GLB:', error);
             });
 
-            // Non-spatial audio
-            const nonSpatialAudioUrl = 'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/AllStar_Game_FOH.mp3';
-            const nonSpatialAudio = new THREE.Audio(listener);
-            audioLoader.load(nonSpatialAudioUrl, (buffer) => {
-                nonSpatialAudio.setBuffer(buffer);
-                nonSpatialAudio.setVolume(1);
-                listener.add(nonSpatialAudio);
-                audioSources.push(nonSpatialAudio);
-            });
+            // Initialize video
+            video = document.createElement('video');
+            video.crossOrigin = "anonymous";
+            video.preload = 'auto';
+            video.load();
+            video.muted = true;
+
+            // Create a texture from the video element
+            videoTexture = new THREE.VideoTexture(video);
+            videoTexture.minFilter = THREE.LinearFilter;
+            videoTexture.magFilter = THREE.LinearFilter;
+            videoTexture.format = THREE.RGBAFormat;
+
+            // Create a plane geometry that will use the video texture
+            const videoGeometry = new THREE.PlaneGeometry(4, 2.25); // 16:9 aspect ratio, adjust size as needed
+            const videoMaterial = new THREE.MeshBasicMaterial({ map: videoTexture, side: THREE.DoubleSide });
+            const videoScreen = new THREE.Mesh(videoGeometry, videoMaterial);
+
+            // Set position and rotation of the video screen relative to the camera
+            videoScreen.position.set(0, 2, -5); // Adjust position as needed
+            videoScreen.rotation.y = Math.PI; // Adjust rotation if needed
+            videoScreen.scale.set(-1, 1, 1);
+
+            // Add video screen to the scene
+            scene.add(videoScreen);
 
             const ambientLight = new THREE.AmbientLight(0xffffff, 1);
             scene.add(ambientLight);
