@@ -57,7 +57,7 @@
 
         const listener = new THREE.AudioListener();
         const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 1000);
-        renderer.xr.setReferenceSpaceType('viewer');
+        renderer.xr.setReferenceSpaceType('local-floor');
         renderer.xr.enabled = true;
         document.body.appendChild(XRButton.createButton(renderer, { requiredFeatures: ['hit-test', 'depth-sensing'] }));
 
