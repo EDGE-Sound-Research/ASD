@@ -1,10 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AR Experience</title>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <link type="text/css" rel="stylesheet" href="main.css">
     <script type="importmap">
         {
             "imports": {
@@ -15,474 +14,506 @@
     </script>
 </head>
 <body>
-
-    <div id="info">
-        <a href="https://threejs.org" target="_blank" rel="noopener">three.js</a> xr - controls - transform
-    </div>
-
     <button class="startButton" id="startButton1" disabled>Start Experience</button>
-    <button id="resetButton" style="display: none;">Reset Experience</button>
+    <button id="resetButton">Reset Experience</button>
 
     <script type="module">
         import * as THREE from 'three';
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-        import { TransformControls } from 'three/addons/controls/TransformControls.js';
-        import { XRButton } from 'three/addons/webxr/XRButton.js';
-        import { XRControllerModelFactory } from 'three/addons/webxr/XRControllerModelFactory.js';
+        import { ARButton } from 'three/addons/webxr/ARButton.js';
+        import { XRHandModelFactory } from 'three/addons/webxr/XRHandModelFactory.js';
+        import { OculusHandModel } from 'three/addons/webxr/OculusHandModel.js';
+        import { OculusHandPointerModel } from 'three/addons/webxr/OculusHandPointerModel.js';
+        import { createText } from 'three/addons/webxr/Text2D.js';
+        import { World, System, Component, TagComponent, Types } from 'three/addons/libs/ecsy.module.js';
+        import { Interaction } from './three.interaction.min.js';
 
-        let container;
+        class Object3D extends Component {}
+        Object3D.schema = { object: { type: Types.Ref } };
+
+        class Button extends Component {}
+        Button.schema = { currState: { type: Types.String, default: 'none' }, prevState: { type: Types.String, default: 'none' }, action: { type: Types.Ref, default: () => {} } };
+
+        class ButtonSystem extends System {
+            execute() {
+                this.queries.buttons.results.forEach(entity => {
+                    const button = entity.getMutableComponent(Button);
+                    const buttonMesh = entity.getComponent(Object3D).object;
+                    if (button.currState == 'none') {
+                        buttonMesh.scale.set(1, 1, 1);
+                    } else {
+                        buttonMesh.scale.set(1.1, 1.1, 1.1);
+                    }
+                    if (button.currState == 'pressed' && button.prevState != 'pressed') {
+                        button.action();
+                    }
+                    button.prevState = button.currState;
+                    button.currState = 'none';
+                });
+            }
+        }
+        ButtonSystem.queries = { buttons: { components: [Button] } };
+
+        class Draggable extends Component {}
+        Draggable.schema = { state: { type: Types.String, default: 'none' }, originalParent: { type: Types.Ref, default: null }, attachedPointer: { type: Types.Ref, default: null } };
+
+        class DraggableSystem extends System {
+            execute() {
+                this.queries.draggable.results.forEach(entity => {
+                    const draggable = entity.getMutableComponent(Draggable);
+                    const object = entity.getComponent(Object3D).object;
+                    if (draggable.originalParent == null) {
+                        draggable.originalParent = object.parent;
+                    }
+                    switch (draggable.state) {
+                        case 'to-be-attached':
+                            draggable.attachedPointer.children[0].attach(object);
+                            draggable.state = 'attached';
+                            break;
+                        case 'to-be-detached':
+                            draggable.originalParent.attach(object);
+                            draggable.state = 'detached';
+                            break;
+                        default:
+                            object.scale.set(1, 1, 1);
+                    }
+                });
+            }
+        }
+        DraggableSystem.queries = { draggable: { components: [Draggable] } };
+
+        class Intersectable extends TagComponent {}
+
+        class HandRaySystem extends System {
+            init(attributes) {
+                this.handPointers = attributes.handPointers;
+            }
+            execute() {
+                this.handPointers.forEach(hp => {
+                    let distance = null;
+                    let intersectingEntity = null;
+                    this.queries.intersectable.results.forEach(entity => {
+                        const object = entity.getComponent(Object3D).object;
+                        const intersections = hp.intersectObject(object, false);
+                        if (intersections && intersections.length > 0) {
+                            if (distance == null || intersections[0].distance < distance) {
+                                distance = intersections[0].distance;
+                                intersectingEntity = entity;
+                            }
+                        }
+                    });
+                    if (distance) {
+                        hp.setCursor(distance);
+                        if (intersectingEntity.hasComponent(Button)) {
+                            const button = intersectingEntity.getMutableComponent(Button);
+                            if (hp.isPinched()) {
+                                button.currState = 'pressed';
+                            } else if (button.currState != 'pressed') {
+                                button.currState = 'hovered';
+                            }
+                        }
+                        if (intersectingEntity.hasComponent(Draggable)) {
+                            const draggable = intersectingEntity.getMutableComponent(Draggable);
+                            const object = intersectingEntity.getComponent(Object3D).object;
+                            object.scale.set(1.1, 1.1, 1.1);
+                            if (hp.isPinched()) {
+                                if (!hp.isAttached() && draggable.state != 'attached') {
+                                    draggable.state = 'to-be-attached';
+                                    draggable.attachedPointer = hp;
+                                    hp.setAttached(true);
+                                }
+                            } else {
+                                if (hp.isAttached() && draggable.state == 'attached') {
+                                    draggable.state = 'to-be-detached';
+                                    draggable.attachedPointer = null;
+                                    hp.setAttached(false);
+                                }
+                            }
+                        }
+                    } else {
+                        hp.setCursor(1.5);
+                    }
+                });
+            }
+        }
+        HandRaySystem.queries = { intersectable: { components: [Intersectable] } };
+
+        class HandsInstructionText extends TagComponent {}
+
+        class InstructionSystem extends System {
+            init(attributes) {
+                this.controllers = attributes.controllers;
+            }
+            execute() {
+                let visible = false;
+                this.controllers.forEach(controller => {
+                    if (controller.visible) {
+                        visible = true;
+                    }
+                });
+                this.queries.instructionTexts.results.forEach(entity => {
+                    const object = entity.getComponent(Object3D).object;
+                    object.visible = visible;
+                });
+            }
+        }
+        InstructionSystem.queries = { instructionTexts: { components: [HandsInstructionText] } };
+
+        class OffsetFromCamera extends Component {}
+        OffsetFromCamera.schema = { x: { type: Types.Number, default: 0 }, y: { type: Types.Number, default: 0 }, z: { type: Types.Number, default: 0 } };
+
+        class NeedCalibration extends TagComponent {}
+
+        class CalibrationSystem extends System {
+            init(attributes) {
+                this.camera = attributes.camera;
+                this.renderer = attributes.renderer;
+            }
+            execute() {
+                this.queries.needCalibration.results.forEach(entity => {
+                    if (this.renderer.xr.getSession()) {
+                        const offset = entity.getComponent(OffsetFromCamera);
+                        const object = entity.getComponent(Object3D).object;
+                        const xrCamera = this.renderer.xr.getCamera();
+                        object.position.x = xrCamera.position.x + offset.x;
+                        object.position.y = xrCamera.position.y + offset.y;
+                        object.position.z = xrCamera.position.z + offset.z;
+                        entity.removeComponent(NeedCalibration);
+                    }
+                });
+            }
+        }
+        CalibrationSystem.queries = { needCalibration: { components: [NeedCalibration] } };
+
+        class Randomizable extends TagComponent {}
+
+        class RandomizerSystem extends System {
+            init() {
+                this.needRandomizing = true;
+            }
+            execute() {
+                if (!this.needRandomizing) {
+                    return;
+                }
+                this.queries.randomizable.results.forEach(entity => {
+                    const object = entity.getComponent(Object3D).object;
+                    object.material.color.setHex(Math.random() * 0xffffff);
+                    object.position.x = Math.random() * 2 - 1;
+                    object.position.y = Math.random() * 2;
+                    object.position.z = Math.random() * 2 - 1;
+                    object.rotation.x = Math.random() * 2 * Math.PI;
+                    object.rotation.y = Math.random() * 2 * Math.PI;
+                    object.rotation.z = Math.random() * 2 * Math.PI;
+                    object.scale.x = Math.random() + 0.5;
+                    object.scale.y = Math.random() + 0.5;
+                    object.scale.z = Math.random() + 0.5;
+                    this.needRandomizing = false;
+                });
+            }
+        }
+        RandomizerSystem.queries = { randomizable: { components: [Randomizable] } };
+
+        const world = new World();
+        const clock = new THREE.Clock();
         let camera, scene, renderer;
-        let controller1, controller2, line;
-        let controllerGrip1, controllerGrip2;
-        let raycaster;
-
-        let controls, court;
-
+        let isGLBLoaded = false;
+        let isVideoLoaded = false;
+        let allAudioLoaded = false;
+        let audioLoadedCount = 0;
+        let court;
+        const modelIDs = ['1', '2', '3', '4', '5', '6', '7', 'basket1', 'basket2'];
+        const audioUrls = [
+            'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/Ball_Stem.mp3',
+            'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/Player1_Stem.mp3',
+            'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/Player2_Stem.mp3',
+            'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/Player3_Stem.mp3',
+            'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/Player4_Stem.mp3',
+            'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/Player5_Stem.mp3',
+            'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/Player6_Stem.mp3',
+            'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/NetL_Stem.mp3',
+            'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/NetR_Stem.mp3' // Add the URL for basket1
+        ];
         const audioSources = [];
-        let mixer, video, videoTexture;
-        let startButtonEnabled = false;
-		let isGLBLoaded = false;
-		let isVideoLoaded = false;
-		let allAudioLoaded = false;
-		let audioLoadedCount = 0;
-		
+        const audioLoader = new THREE.AudioLoader();
 
+        // VIDEO STUFF
+        const video = document.createElement('video');
+        video.crossOrigin = "anonymous";
+        video.preload = 'auto';
+        video.load();
+        video.muted = true;
 
+        // Create a texture from the video element
+        const videoTexture = new THREE.VideoTexture(video);
+        videoTexture.minFilter = THREE.LinearFilter;
+        videoTexture.magFilter = THREE.LinearFilter;
+        videoTexture.format = THREE.RGBAFormat;
+
+        // Create a plane geometry that will use the video texture
+        const geometry = new THREE.PlaneGeometry(4, 2.25); // 16:9 aspect ratio, adjust size as needed
+        const material = new THREE.MeshBasicMaterial({ map: videoTexture, side: THREE.DoubleSide });
+        const videoScreen = new THREE.Mesh(geometry, material);
+        // Set position and rotation of the video screen relative to the camera
+        videoScreen.position.set(0, 2, -5); // Adjust position as needed
+        videoScreen.rotation.y = Math.PI; // Adjust rotation if needed
+        videoScreen.scale.set(-1, 1, 1);
+
+        // Set up scene, camera, renderer
         init();
         animate();
 
+        function makeButtonMesh(x, y, z, color) {
+            const geometry = new THREE.BoxGeometry(x, y, z);
+            const material = new THREE.MeshPhongMaterial({ color: color });
+            const buttonMesh = new THREE.Mesh(geometry, material);
+            return buttonMesh;
+        }
+
         function init() {
-            container = document.createElement('div');
+            const container = document.createElement('div');
             document.body.appendChild(container);
 
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x808080);
+            scene.background = new THREE.Color(0x444444);
+            scene.add(videoScreen);
 
             camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 10);
-            camera.position.set(0, 1.6, 0);
+            camera.position.set(0, 1.2, 0.3);
+            scene.add(camera);
 
-            const floorGeometry = new THREE.PlaneGeometry(6, 6);
-            const floorMaterial = new THREE.ShadowMaterial({ opacity: 0.25, blending: THREE.CustomBlending, transparent: false });
-            const floor = new THREE.Mesh(floorGeometry, floorMaterial);
-            floor.rotation.x = -Math.PI / 2;
-            floor.receiveShadow = true;
-            scene.add(floor);
+            const listener = new THREE.AudioListener();
+            camera.add(listener);
 
-            scene.add(new THREE.HemisphereLight(0xbcbcbc, 0xa5a5a5, 3));
+            scene.add(new THREE.HemisphereLight(0xcccccc, 0x999999, 3));
 
             const light = new THREE.DirectionalLight(0xffffff, 3);
             light.position.set(0, 6, 0);
             light.castShadow = true;
-            light.shadow.camera.top = 3;
-            light.shadow.camera.bottom = -3;
-            light.shadow.camera.right = 3;
-            light.shadow.camera.left = -3;
+            light.shadow.camera.top = 2;
+            light.shadow.camera.bottom = -2;
+            light.shadow.camera.right = 2;
+            light.shadow.camera.left = -2;
             light.shadow.mapSize.set(4096, 4096);
             scene.add(light);
-
-function init() {
-    const container = document.createElement('div');
-    document.body.appendChild(container);
-
-    scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x444444);
-    scene.add(videoScreen);
-
-    camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 10);
-    camera.position.set(0, 1.2, 0.3);
-    scene.add(camera);
-
-    const listener = new THREE.AudioListener();
-    camera.add(listener);
-
-    scene.add(new THREE.HemisphereLight(0xcccccc, 0x999999, 3));
-
-    const light = new THREE.DirectionalLight(0xffffff, 3);
-    light.position.set(0, 6, 0);
-    light.castShadow = true;
-    light.shadow.camera.top = 2;
-    light.shadow.camera.bottom = -2;
-    light.shadow.camera.right = 2;
-    light.shadow.camera.left = -2;
-    light.shadow.mapSize.set(4096, 4096);
-    scene.add(light);
-
-    renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setPixelRatio(window.devicePixelRatio);
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.shadowMap.enabled = true;
-    renderer.xr.enabled = true;
-    renderer.xr.cameraAutoUpdate = false;
-
-    container.appendChild(renderer.domElement);
-
-    const sessionInit = { requiredFeatures: ['hand-tracking'] };
-    document.body.appendChild(ARButton.createButton(renderer, sessionInit));
-
-    const controller1 = renderer.xr.getController(0);
-    scene.add(controller1);
-
-    const controller2 = renderer.xr.getController(1);
-    scene.add(controller2);
-
-    const controllerModelFactory = new XRControllerModelFactory();
-
-    const controllerGrip1 = renderer.xr.getControllerGrip(0);
-    controllerGrip1.add(controllerModelFactory.createControllerModel(controllerGrip1));
-    scene.add(controllerGrip1);
-
-    const hand1 = renderer.xr.getHand(0);
-    hand1.add(new OculusHandModel(hand1));
-    const handPointer1 = new OculusHandPointerModel(hand1, controller1);
-    hand1.add(handPointer1);
-    scene.add(hand1);
-
-    const controllerGrip2 = renderer.xr.getControllerGrip(1);
-    controllerGrip2.add(controllerModelFactory.createControllerModel(controllerGrip2));
-    scene.add(controllerGrip2);
-
-    const hand2 = renderer.xr.getHand(1);
-    hand2.add(new OculusHandModel(hand2));
-    const handPointer2 = new OculusHandPointerModel(hand2, controller2);
-    hand2.add(handPointer2);
-    scene.add(hand2);
-
-    const floorGeometry = new THREE.PlaneGeometry(4, 4);
-    const floorMaterial = new THREE.MeshPhongMaterial({ color: 0x222222 });
-    const floor = new THREE.Mesh(floorGeometry, floorMaterial);
-    floor.rotation.x = -Math.PI / 2;
-    floor.receiveShadow = true;
-    scene.add(floor);
-
-    const menuGeometry = new THREE.PlaneGeometry(0.24, 0.5);
-    const menuMaterial = new THREE.MeshPhongMaterial({ opacity: 0, transparent: true });
-    const menuMesh = new THREE.Mesh(menuGeometry, menuMaterial);
-    menuMesh.position.set(0.4, 1, -1);
-    menuMesh.rotation.y = -Math.PI / 12;
-    scene.add(menuMesh);
-
-    const resetButton = makeButtonMesh(0.2, 0.1, 0.01, 0x355c7d);
-    const resetButtonText = createText('reset', 0.06);
-    resetButton.add(resetButtonText);
-    resetButtonText.position.set(0, 0, 0.0051);
-    resetButton.position.set(0, -0.06, 0);
-    menuMesh.add(resetButton);
-
-    const exitButton = makeButtonMesh(0.2, 0.1, 0.01, 0xff0000);
-    const exitButtonText = createText('exit', 0.06);
-    exitButton.add(exitButtonText);
-    exitButtonText.position.set(0, 0, 0.0051);
-    exitButton.position.set(0, -0.18, 0);
-    menuMesh.add(exitButton);
-
-    const instructionText = createText('This is a WebXR Hands demo, please explore with hands.', 0.04);
-    instructionText.position.set(0, 1.6, -0.6);
-    scene.add(instructionText);
-
-    const exitText = createText('Exiting session...', 0.04);
-    exitText.position.set(0, 1.5, -0.6);
-    exitText.visible = false;
-    scene.add(exitText);
-
-    // Load the GLTF model
-    const loader = new GLTFLoader();
-    let mixer;
-    loader.load('https://uploads-ssl.webflow.com/62585c8f3b855d70abac2fff/66464fdbb596dafdc5a82406_rtvse-asd.glb.txt', function (gltf) {
-        if (gltf && gltf.scene) {
-            court = gltf.scene;
-            court.scale.set(0.1, 0.1, 0.1); // Set the scale to 0.1 for AR
-            scene.add(court);
-
-            // Animation Mixer
-            mixer = new THREE.AnimationMixer(court);
-            gltf.animations.forEach((clip) => {
-                mixer.clipAction(clip).play();
-            });
-
-            court.traverse((child) => {
-                if (child.isMesh) {
-                    const index = modelIDs.indexOf(child.name);
-                    if (index !== -1) {
-                        audioLoader.load(audioUrls[index], (buffer) => {
-                            const audio = new THREE.PositionalAudio(listener);
-                            audio.setBuffer(buffer);
-                            audio.setRefDistance(1);
-                            audio.setDistanceModel('exponential');
-                            audio.setRolloffFactor(2.5);
-                            child.add(audio);
-                            audioSources.push(audio);
-
-                            // Increment the loaded count and check if all audio is loaded
-                            audioLoadedCount++;
-                            if (audioLoadedCount === audioUrls.length) {
-                                allAudioLoaded = true;
-                                checkAllLoaded();
-                            }
-                        }, undefined, function (error) {
-                            console.error(`Error loading audio for model ${child.name}:`, error);
-                        });
-                    }
-                }
-            });
-
-            // Once the model is loaded, set the flag and check all resources
-            isGLBLoaded = true;
-            checkAllLoaded();
-        } else {
-            console.error('Failed to load GLTF model.');
-        }
-    }, undefined, function (error) {
-        console.error('An error occurred while loading the GLTF model:', error);
-    });
-
-    window.addEventListener('resize', onWindowResize);
-}
-
-function checkAllLoaded() {
-    console.log(`GLB Loaded: ${isGLBLoaded}, Video Loaded: ${isVideoLoaded}, All Audio Loaded: ${allAudioLoaded}`);
-    if (isGLBLoaded && isVideoLoaded && allAudioLoaded) {
-        const startButton1 = document.getElementById('startButton1');
-        if (startButton1) {
-            startButton1.disabled = false;
-            console.log("Start Button 1 enabled.");
-        } else {
-            console.log("Start Button 1 not found!");
-        }
-        console.log("All assets loaded. Ready to start!");
-    }
-}
-
-            // Video setup
-            video = document.createElement('video');
-            video.src = 'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/NBA_AllStar_Demo_Clip%20(2).mp4';
-            video.crossOrigin = "anonymous";
-            video.preload = 'auto';
-            video.load();
-            video.muted = true;
-            videoTexture = new THREE.VideoTexture(video);
-            videoTexture.minFilter = THREE.LinearFilter;
-            videoTexture.magFilter = THREE.LinearFilter;
-            videoTexture.format = THREE.RGBAFormat;
-
-            const geometry = new THREE.PlaneGeometry(4, 2.25);
-            const material = new THREE.MeshBasicMaterial({ map: videoTexture, side: THREE.DoubleSide });
-            const videoScreen = new THREE.Mesh(geometry, material);
-            videoScreen.position.set(0, 2, -5);
-            videoScreen.scale.set(-1, 1, 1);
-            scene.add(videoScreen);
-
-            // Audio setup
-            const listener = new THREE.AudioListener();
-            camera.add(listener);
-
-            const audioUrls = [
-                'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/Ball_Stem.mp3',
-                'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/Player1_Stem.mp3',
-                'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/Player2_Stem.mp3',
-                'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/Player3_Stem.mp3',
-                'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/Player4_Stem.mp3',
-                'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/Player5_Stem.mp3',
-                'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/Player6_Stem.mp3',
-                'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/NetL_Stem.mp3',
-                'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/NetR_Stem.mp3'
-            ];
-            const modelIDs = ['1', '2', '3', '4', '5', '6', '7', 'basket1', 'basket2'];
-            const audioLoader = new THREE.AudioLoader();
-            const nonSpatialAudioUrl = 'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/AllStar_Game_FOH.mp3';
-            const nonSpatialAudio = new THREE.Audio(listener);
-            const nonSpatialAudioLoader = new THREE.AudioLoader();
-            nonSpatialAudioLoader.load(nonSpatialAudioUrl, (buffer) => {
-                nonSpatialAudio.setVolume(1);
-                listener.add(nonSpatialAudio);
-                audioSources.push(nonSpatialAudio);
-            });
-
-            // Attach audio sources to GLTF model
-            function attachAudioSources() {
-                court.traverse((child) => {
-                    const index = modelIDs.indexOf(child.name);
-                    if (index !== -1) {
-                        audioLoader.load(audioUrls[index], (buffer) => {
-                            const audio = new THREE.PositionalAudio(listener);
-                            audio.setBuffer(buffer);
-                            audio.setRefDistance(1);
-                            audio.setDistanceModel('exponential');
-                            audio.setRolloffFactor(2.5);
-                            child.add(audio);
-                            audioSources.push(audio);
-                        }, undefined, function (error) {
-                            console.error(`Error loading audio for model ${child.name}:`, error);
-                        });
-                    }
-                });
-            }
-
-            attachAudioSources();
 
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setPixelRatio(window.devicePixelRatio);
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.shadowMap.enabled = true;
             renderer.xr.enabled = true;
+            renderer.xr.cameraAutoUpdate = false;
+
             container.appendChild(renderer.domElement);
 
-            document.body.appendChild(XRButton.createButton(renderer));
+            const sessionInit = { requiredFeatures: ['hand-tracking'] };
+            document.body.appendChild(ARButton.createButton(renderer, sessionInit));
 
-            // Controllers setup
-            controller1 = renderer.xr.getController(0);
-            controller1.addEventListener('select', onSelect);
+            const controller1 = renderer.xr.getController(0);
             scene.add(controller1);
 
-            controller2 = renderer.xr.getController(1);
-            controller2.addEventListener('select', onSelect);
+            const controller2 = renderer.xr.getController(1);
             scene.add(controller2);
 
             const controllerModelFactory = new XRControllerModelFactory();
 
-            controllerGrip1 = renderer.xr.getControllerGrip(0);
+            const controllerGrip1 = renderer.xr.getControllerGrip(0);
             controllerGrip1.add(controllerModelFactory.createControllerModel(controllerGrip1));
             scene.add(controllerGrip1);
 
-            controllerGrip2 = renderer.xr.getControllerGrip(1);
+            const hand1 = renderer.xr.getHand(0);
+            hand1.add(new OculusHandModel(hand1));
+            const handPointer1 = new OculusHandPointerModel(hand1, controller1);
+            hand1.add(handPointer1);
+            scene.add(hand1);
+
+            const controllerGrip2 = renderer.xr.getControllerGrip(1);
             controllerGrip2.add(controllerModelFactory.createControllerModel(controllerGrip2));
             scene.add(controllerGrip2);
 
-            const lineGeometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -1)]);
-            line = new THREE.Line(lineGeometry);
-            line.name = 'line';
-            line.scale.z = 5;
+            const hand2 = renderer.xr.getHand(1);
+            hand2.add(new OculusHandModel(hand2));
+            const handPointer2 = new OculusHandPointerModel(hand2, controller2);
+            hand2.add(handPointer2);
+            scene.add(hand2);
 
-            raycaster = new THREE.Raycaster();
+            const floorGeometry = new THREE.PlaneGeometry(4, 4);
+            const floorMaterial = new THREE.MeshPhongMaterial({ color: 0x222222 });
+            const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+            floor.rotation.x = -Math.PI / 2;
+            floor.receiveShadow = true;
+            scene.add(floor);
 
-            // Controls setup
-            controls = new TransformControls(camera, renderer.domElement);
-            scene.add(controls);
+            const menuGeometry = new THREE.PlaneGeometry(0.24, 0.5);
+            const menuMaterial = new THREE.MeshPhongMaterial({ opacity: 0, transparent: true });
+            const menuMesh = new THREE.Mesh(menuGeometry, menuMaterial);
+            menuMesh.position.set(0.4, 1, -1);
+            menuMesh.rotation.y = -Math.PI / 12;
+            scene.add(menuMesh);
+
+            const resetButton = makeButtonMesh(0.2, 0.1, 0.01, 0x355c7d);
+            const resetButtonText = createText('reset', 0.06);
+            resetButton.add(resetButtonText);
+            resetButtonText.position.set(0, 0, 0.0051);
+            resetButton.position.set(0, -0.06, 0);
+            menuMesh.add(resetButton);
+
+            const exitButton = makeButtonMesh(0.2, 0.1, 0.01, 0xff0000);
+            const exitButtonText = createText('exit', 0.06);
+            exitButton.add(exitButtonText);
+            exitButtonText.position.set(0, 0, 0.0051);
+            exitButton.position.set(0, -0.18, 0);
+            menuMesh.add(exitButton);
+
+            const instructionText = createText('This is a WebXR Hands demo, please explore with hands.', 0.04);
+            instructionText.position.set(0, 1.6, -0.6);
+            scene.add(instructionText);
+
+            const exitText = createText('Exiting session...', 0.04);
+            exitText.position.set(0, 1.5, -0.6);
+            exitText.visible = false;
+            scene.add(exitText);
+
+            world
+                .registerComponent(Object3D)
+                .registerComponent(Button)
+                .registerComponent(Intersectable)
+                .registerComponent(HandsInstructionText)
+                .registerComponent(OffsetFromCamera)
+                .registerComponent(NeedCalibration)
+                .registerComponent(Randomizable)
+                .registerComponent(Draggable);
+
+            world
+                .registerSystem(RandomizerSystem)
+                .registerSystem(InstructionSystem, { controllers: [controllerGrip1, controllerGrip2] })
+                .registerSystem(CalibrationSystem, { renderer: renderer, camera: camera })
+                .registerSystem(ButtonSystem)
+                .registerSystem(DraggableSystem)
+                .registerSystem(HandRaySystem, { handPointers: [handPointer1, handPointer2] });
+
+            for (let i = 0; i < 20; i++) {
+                const object = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.15, 0.15), new THREE.MeshLambertMaterial({ color: 0xffffff }));
+                scene.add(object);
+                const entity = world.createEntity();
+                entity.addComponent(Intersectable);
+                entity.addComponent(Randomizable);
+                entity.addComponent(Object3D, { object: object });
+                entity.addComponent(Draggable);
+            }
+
+            const menuEntity = world.createEntity();
+            menuEntity.addComponent(Intersectable);
+            menuEntity.addComponent(OffsetFromCamera, { x: 0.4, y: 0, z: -1 });
+            menuEntity.addComponent(NeedCalibration);
+            menuEntity.addComponent(Object3D, { object: menuMesh });
+
+            const rbEntity = world.createEntity();
+            rbEntity.addComponent(Intersectable);
+            rbEntity.addComponent(Object3D, { object: resetButton });
+            const rbAction = function () {
+                world.getSystem(RandomizerSystem).needRandomizing = true;
+            };
+            rbEntity.addComponent(Button, { action: rbAction });
+
+            const ebEntity = world.createEntity();
+            ebEntity.addComponent(Intersectable);
+            ebEntity.addComponent(Object3D, { object: exitButton });
+            const ebAction = function () {
+                exitText.visible = true;
+                setTimeout(function () {
+                    exitText.visible = false;
+                    renderer.xr.getSession().end();
+                }, 2000);
+            };
+            ebEntity.addComponent(Button, { action: ebAction });
+
+            const itEntity = world.createEntity();
+            itEntity.addComponent(HandsInstructionText);
+            itEntity.addComponent(Object3D, { object: instructionText });
+
+            // Load the GLTF model
+            const loader = new GLTFLoader();
+            let mixer;
+            loader.load('https://uploads-ssl.webflow.com/62585c8f3b855d70abac2fff/66464fdbb596dafdc5a82406_rtvse-asd.glb.txt', function (gltf) {
+                if (gltf && gltf.scene) {
+                    console.log("GLTF model loaded successfully.");
+                    court = gltf.scene;
+                    court.scale.set(0.1, 0.1, 0.1); // Set the scale to 0.1 for AR
+                    scene.add(court);
+
+                    // Animation Mixer
+                    mixer = new THREE.AnimationMixer(court);
+                    gltf.animations.forEach((clip) => {
+                        mixer.clipAction(clip).play();
+                    });
+
+                    court.traverse((child) => {
+                        if (child.isMesh) {
+                            const index = modelIDs.indexOf(child.name);
+                            if (index !== -1) {
+                                audioLoader.load(audioUrls[index], (buffer) => {
+                                    const audio = new THREE.PositionalAudio(listener);
+                                    audio.setBuffer(buffer);
+                                    audio.setRefDistance(1);
+                                    audio.setDistanceModel('exponential');
+                                    audio.setRolloffFactor(2.5);
+                                    child.add(audio);
+                                    audioSources.push(audio);
+
+                                    // Increment the loaded count and check if all audio is loaded
+                                    audioLoadedCount++;
+                                    if (audioLoadedCount === audioUrls.length) {
+                                        allAudioLoaded = true;
+                                        checkAllLoaded();
+                                    }
+                                }, undefined, function (error) {
+                                    console.error(`Error loading audio for model ${child.name}:`, error);
+                                });
+                            }
+                        }
+                    });
+
+                    // Once the model is loaded, set the flag and check all resources
+                    isGLBLoaded = true;
+                    checkAllLoaded();
+                } else {
+                    console.error('Failed to load GLTF model.');
+                }
+            }, undefined, function (error) {
+                console.error('An error occurred while loading the GLTF model:', error);
+            });
 
             window.addEventListener('resize', onWindowResize);
-
-            // Create buttons
-            createButtons();
-
-            document.getElementById('startButton1').addEventListener('click', startExperience);
-            document.getElementById('resetButton').addEventListener('click', restartExperience);
-
-            document.addEventListener('visibilitychange', function () {
-                if (document.hidden) {
-                    stopExperience();
-                }
-            });
         }
 
-        function createButtons() {
-            const playButton = makeButtonMesh(0.2, 0.1, 0.01, 0x00ff00);
-            playButton.position.set(0, 1, -1);
-            scene.add(playButton);
-
-            const pauseButton = makeButtonMesh(0.2, 0.1, 0.01, 0xffff00);
-            pauseButton.position.set(0, 1.2, -1);
-            scene.add(pauseButton);
-
-            const restartButton = makeButtonMesh(0.2, 0.1, 0.01, 0xff0000);
-            restartButton.position.set(0, 1.4, -1);
-            scene.add(restartButton);
-
-            playButton.userData.action = startExperience;
-            pauseButton.userData.action = pauseExperience;
-            restartButton.userData.action = restartExperience;
-        }
-
-        function onSelect(event) {
-            const controller = event.target;
-            raycaster.setFromCamera({ x: 0, y: 0 }, camera);
-            const intersects = raycaster.intersectObjects(scene.children);
-
-            if (intersects.length > 0) {
-                const intersect = intersects[0];
-                if (intersect.object.userData.action) {
-                    intersect.object.userData.action();
+        function checkAllLoaded() {
+            console.log(`GLB Loaded: ${isGLBLoaded}, Video Loaded: ${isVideoLoaded}, All Audio Loaded: ${allAudioLoaded}`);
+            if (isGLBLoaded && isVideoLoaded && allAudioLoaded) {
+                const startButton1 = document.getElementById('startButton1');
+                if (startButton1) {
+                    startButton1.disabled = false;
+                    console.log("Start Button 1 enabled.");
+                } else {
+                    console.log("Start Button 1 not found!");
                 }
+                console.log("All assets loaded. Ready to start!");
             }
+        }
+
+        function animate() {
+            renderer.setAnimationLoop(() => {
+                const delta = clock.getDelta();
+                if (mixer) {
+                    mixer.update(delta);
+                }
+                renderer.render(scene, camera);
+            });
         }
 
         function onWindowResize() {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
-        }
-
-        function animate() {
-            renderer.setAnimationLoop(render);
-        }
-
-        function render() {
-            const delta = clock.getDelta();
-            if (mixer) {
-                mixer.update(delta);
-            }
-            renderer.render(scene, camera);
-        }
-
-        function checkAllLoaded() {
-            if (!startButtonEnabled) {
-                startButtonEnabled = true;
-                const startButton1 = document.getElementById('startButton1');
-                if (startButton1) {
-                    startButton1.disabled = false;
-                }
-            }
-        }
-
-        function startExperience() {
-            if (mixer) {
-                mixer._actions.forEach(action => {
-                    action.paused = false;
-                    action.play();
-                });
-            }
-            audioSources.forEach(audio => {
-                if (!audio.isPlaying) {
-                    audio.play();
-                }
-            });
-            if (video && video.paused) {
-                video.play();
-            }
-            document.getElementById('resetButton').style.display = 'block';
-            document.querySelectorAll('.startButton').forEach(button => {
-                button.style.display = 'none';
-            });
-        }
-
-        function pauseExperience() {
-            if (mixer) {
-                mixer._actions.forEach(action => {
-                    action.paused = true;
-                });
-            }
-            audioSources.forEach(audio => audio.pause());
-            if (video && !video.paused) {
-                video.pause();
-            }
-        }
-
-        function restartExperience() {
-            stopExperience();
-            startExperience();
-        }
-
-        function stopExperience() {
-            if (mixer) {
-                mixer.stopAllAction();
-                mixer._actions.forEach(action => {
-                    action.stop();
-                    action.reset();
-                });
-            }
-            audioSources.forEach(audio => audio.stop());
-            if (video) {
-                video.pause();
-                video.currentTime = 0;
-            }
         }
     </script>
 </body>
