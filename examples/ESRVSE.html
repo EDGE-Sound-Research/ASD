@@ -74,20 +74,56 @@
             light.shadow.mapSize.set(4096, 4096);
             scene.add(light);
 
-            // GLB model loading
-            const loader = new GLTFLoader();
-            loader.load('https://uploads-ssl.webflow.com/62585c8f3b855d70abac2fff/66464fdbb596dafdc5a82406_rtvse-asd.glb.txt', function (gltf) {
-                court = gltf.scene;
-                court.scale.set(0.1, 0.1, 0.1); // Set the scale to 0.1 for AR
-                scene.add(court);
-                mixer = new THREE.AnimationMixer(court);
-                gltf.animations.forEach((clip) => {
-                    const action = mixer.clipAction(clip);
-                    action.paused = true; // Prevent autoplay
-                });
+// Load the GLTF model with animations
+const loader = new GLTFLoader();
+let mixer;
+loader.load('https://uploads-ssl.webflow.com/62585c8f3b855d70abac2fff/66464fdbb596dafdc5a82406_rtvse-asd.glb.txt', function (gltf) {
+    if (gltf && gltf.scene) {
+        court = gltf.scene;
+        court.scale.set(0.1, 0.1, 0.1); // Set the scale to 0.1 for AR
+        scene.add(court);
 
-                checkAllLoaded();
-            });
+        // Animation Mixer
+        mixer = new THREE.AnimationMixer(court);
+        gltf.animations.forEach((clip) => {
+            mixer.clipAction(clip).play();
+        });
+
+        court.traverse((child) => {
+            if (child.isMesh) {
+                const index = modelIDs.indexOf(child.name);
+                if (index !== -1) {
+                    audioLoader.load(audioUrls[index], (buffer) => {
+                        const audio = new THREE.PositionalAudio(listener);
+                        audio.setBuffer(buffer);
+                        audio.setRefDistance(1);
+                        audio.setDistanceModel('exponential');
+                        audio.setRolloffFactor(2.5);
+                        child.add(audio);
+                        audioSources.push(audio);
+
+                        // Increment the loaded count and check if all audio is loaded
+                        audioLoadedCount++;
+                        if (audioLoadedCount === audioUrls.length) {
+                            allAudioLoaded = true;
+                            checkAllLoaded();
+                        }
+                    }, undefined, function (error) {
+                        console.error(`Error loading audio for model ${child.name}:`, error);
+                    });
+                }
+            }
+        });
+
+        // Once the model is loaded, set the flag and check all resources
+        isGLBLoaded = true;
+        checkAllLoaded();
+    } else {
+        console.error('Failed to load GLTF model.');
+    }
+}, undefined, function (error) {
+    console.error('An error occurred while loading the GLTF model:', error);
+});
 
             // Video setup
             video = document.createElement('video');
