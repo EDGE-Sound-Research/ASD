@@ -41,9 +41,9 @@
         videoTexture.magFilter = THREE.LinearFilter;
         videoTexture.format = THREE.RGBAFormat;
 
-        const geometry = new THREE.PlaneGeometry(4, 2.25);
+        const videoGeometry = new THREE.PlaneGeometry(4, 2.25);
         const material = new THREE.MeshBasicMaterial({ map: videoTexture, side: THREE.DoubleSide });
-        const videoScreen = new THREE.Mesh(geometry, material);
+        const videoScreen = new THREE.Mesh(videoGeometry, material);
 
         videoScreen.position.set(0, 2, -5);
         videoScreen.rotation.y = Math.PI;
@@ -348,8 +348,8 @@
         controllerGrip2.add(controllerModelFactory.createControllerModel(controllerGrip2));
         scene.add(controllerGrip2);
 
-        const geometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -1)]);
-        const line = new THREE.Line(geometry);
+        const lineGeometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -1)]);
+        const line = new THREE.Line(lineGeometry);
         line.name = 'line';
         line.scale.z = 5;
 
