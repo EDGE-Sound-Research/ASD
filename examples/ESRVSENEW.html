@@ -50,129 +50,136 @@
         init();
         animate();
 
-        function init() {
-            scene = new THREE.Scene();
-            camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 10);
-            camera.position.set(0, 1.6, 3);
-            renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setPixelRatio(window.devicePixelRatio);
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.xr.enabled = true;
-            document.body.appendChild(renderer.domElement);
-            document.body.appendChild(XRButton.createButton(renderer));
+function init() {
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 10);
+    camera.position.set(0, 1.6, 3);
 
-            group = new THREE.Group();
-            scene.add(group);
+    // Initialize the listener and add it to the camera
+    listener = new THREE.AudioListener();
+    camera.add(listener);
 
-            const floorGeometry = new THREE.PlaneGeometry(6, 6);
-            const floorMaterial = new THREE.ShadowMaterial({ opacity: 0.25 });
-            const floor = new THREE.Mesh(floorGeometry, floorMaterial);
-            floor.rotation.x = -Math.PI / 2;
-            floor.receiveShadow = true;
-            scene.add(floor);
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.xr.enabled = true;
+    document.body.appendChild(renderer.domElement);
+    document.body.appendChild(XRButton.createButton(renderer));
 
-            const light = new THREE.DirectionalLight(0xffffff, 3);
-            light.position.set(0, 6, 0);
-            light.castShadow = true;
-            light.shadow.camera.top = 3;
-            light.shadow.camera.bottom = -3;
-            light.shadow.camera.right = 3;
-            light.shadow.camera.left = -3;
-            light.shadow.mapSize.set(4096, 4096);
-            scene.add(light);
+    group = new THREE.Group();
+    scene.add(group);
 
-            // Hand tracking and controllers
-            const handModelFactory = new XRHandModelFactory();
-            const controllerModelFactory = new XRControllerModelFactory();
+    const floorGeometry = new THREE.PlaneGeometry(6, 6);
+    const floorMaterial = new THREE.ShadowMaterial({ opacity: 0.25 });
+    const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+    floor.rotation.x = -Math.PI / 2;
+    floor.receiveShadow = true;
+    scene.add(floor);
 
-            controller1 = renderer.xr.getController(0);
-            controller1.addEventListener('selectstart', onSelectStart);
-            controller1.addEventListener('selectend', onSelectEnd);
-            scene.add(controller1);
+    const light = new THREE.DirectionalLight(0xffffff, 3);
+    light.position.set(0, 6, 0);
+    light.castShadow = true;
+    light.shadow.camera.top = 3;
+    light.shadow.camera.bottom = -3;
+    light.shadow.camera.right = 3;
+    light.shadow.camera.left = -3;
+    light.shadow.mapSize.set(4096, 4096);
+    scene.add(light);
 
-            controller2 = renderer.xr.getController(1);
-            controller2.addEventListener('selectstart', onSelectStart);
-            controller2.addEventListener('selectend', onSelectEnd);
-            scene.add(controller2);
+    // Hand tracking and controllers
+    const handModelFactory = new XRHandModelFactory();
+    const controllerModelFactory = new XRControllerModelFactory();
 
-            controllerGrip1 = renderer.xr.getControllerGrip(0);
-            controllerGrip1.add(controllerModelFactory.createControllerModel(controllerGrip1));
-            scene.add(controllerGrip1);
+    controller1 = renderer.xr.getController(0);
+    controller1.addEventListener('selectstart', onSelectStart);
+    controller1.addEventListener('selectend', onSelectEnd);
+    scene.add(controller1);
 
-            controllerGrip2 = renderer.xr.getControllerGrip(1);
-            controllerGrip2.add(controllerModelFactory.createControllerModel(controllerGrip2));
-            scene.add(controllerGrip2);
+    controller2 = renderer.xr.getController(1);
+    controller2.addEventListener('selectstart', onSelectStart);
+    controller2.addEventListener('selectend', onSelectEnd);
+    scene.add(controller2);
 
-            const hand1 = renderer.xr.getHand(0);
-            hand1.add(handModelFactory.createHandModel(hand1));
-            scene.add(hand1);
+    controllerGrip1 = renderer.xr.getControllerGrip(0);
+    controllerGrip1.add(controllerModelFactory.createControllerModel(controllerGrip1));
+    scene.add(controllerGrip1);
 
-            const hand2 = renderer.xr.getHand(1);
-            hand2.add(handModelFactory.createHandModel(hand2));
-            scene.add(hand2);
+    controllerGrip2 = renderer.xr.getControllerGrip(1);
+    controllerGrip2.add(controllerModelFactory.createControllerModel(controllerGrip2));
+    scene.add(controllerGrip2);
 
-            const geometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -1)]);
-            const line = new THREE.Line(geometry);
-            line.name = 'line';
-            line.scale.z = 5;
+    const hand1 = renderer.xr.getHand(0);
+    hand1.add(handModelFactory.createHandModel(hand1));
+    scene.add(hand1);
 
-            controller1.add(line.clone());
-            controller2.add(line.clone());
+    const hand2 = renderer.xr.getHand(1);
+    hand2.add(handModelFactory.createHandModel(hand2));
+    scene.add(hand2);
 
-            raycaster = new THREE.Raycaster();
+    const geometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -1)]);
+    const line = new THREE.Line(geometry);
+    line.name = 'line';
+    line.scale.z = 5;
 
-            window.addEventListener('resize', onWindowResize);
+    controller1.add(line.clone());
+    controller2.add(line.clone());
 
-            // Load the GLTF model
-            const loader = new GLTFLoader();
-            clock = new THREE.Clock();
-            loader.load('https://uploads-ssl.webflow.com/62585c8f3b855d70abac2fff/66464fdbb596dafdc5a82406_rtvse-asd.glb.txt', function (gltf) {
-                court = gltf.scene;
-                court.scale.set(0.1, 0.1, 0.1);
-                scene.add(court);
-                mixer = new THREE.AnimationMixer(court);
-                gltf.animations.forEach((clip) => {
-                    mixer.clipAction(clip).play();
-                });
-                court.traverse((child) => {
-                    const index = modelIDs.indexOf(child.name);
-                    if (index !== -1) {
-                        audioLoader.load(audioUrls[index], (buffer) => {
-                            const audio = new THREE.PositionalAudio(listener);
-                            audio.setBuffer(buffer);
-                            audio.setRefDistance(1);
-                            audio.setDistanceModel('exponential');
-                            audio.setRolloffFactor(2.5);
-                            child.add(audio);
-                            audioSources.push(audio);
-                            audioLoadedCount++;
-                            if (audioLoadedCount === audioUrls.length) {
-                                allAudioLoaded = true;
-                                checkAllLoaded();
-                            }
-                        }, undefined, function (error) {
-                            console.error(`Error loading audio for model ${child.name}:`, error);
-                        });
+    raycaster = new THREE.Raycaster();
+
+    window.addEventListener('resize', onWindowResize);
+
+    // Load the GLTF model
+    const loader = new GLTFLoader();
+    clock = new THREE.Clock();
+    loader.load('https://uploads-ssl.webflow.com/62585c8f3b855d70abac2fff/66464fdbb596dafdc5a82406_rtvse-asd.glb.txt', function (gltf) {
+        court = gltf.scene;
+        court.scale.set(0.1, 0.1, 0.1);
+        scene.add(court);
+        mixer = new THREE.AnimationMixer(court);
+        gltf.animations.forEach((clip) => {
+            mixer.clipAction(clip).play();
+        });
+        court.traverse((child) => {
+            const index = modelIDs.indexOf(child.name);
+            if (index !== -1) {
+                audioLoader.load(audioUrls[index], (buffer) => {
+                    const audio = new THREE.PositionalAudio(listener);
+                    audio.setBuffer(buffer);
+                    audio.setRefDistance(1);
+                    audio.setDistanceModel('exponential');
+                    audio.setRolloffFactor(2.5);
+                    child.add(audio);
+                    audioSources.push(audio);
+                    audioLoadedCount++;
+                    if (audioLoadedCount === audioUrls.length) {
+                        allAudioLoaded = true;
+                        checkAllLoaded();
                     }
+                }, undefined, function (error) {
+                    console.error(`Error loading audio for model ${child.name}:`, error);
                 });
-                isGLBLoaded = true;
-                checkAllLoaded();
-            }, undefined, function (error) {
-                console.error('An error happened during the loading of the GLB:', error);
-            });
+            }
+        });
+        isGLBLoaded = true;
+        checkAllLoaded();
+    }, undefined, function (error) {
+        console.error('An error happened during the loading of the GLB:', error);
+    });
 
-            // Non-spatial audio
-            const nonSpatialAudioUrl = 'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/AllStar_Game_FOH.mp3';
-            const nonSpatialAudio = new THREE.Audio(listener);
-            audioLoader.load(nonSpatialAudioUrl, (buffer) => {
-                nonSpatialAudio.setBuffer(buffer);
-                nonSpatialAudio.setVolume(1);
-                listener.add(nonSpatialAudio);
-                audioSources.push(nonSpatialAudio);
-            });
+    // Non-spatial audio
+    const nonSpatialAudioUrl = 'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/AllStar_Game_FOH.mp3';
+    const nonSpatialAudio = new THREE.Audio(listener);
+    audioLoader.load(nonSpatialAudioUrl, (buffer) => {
+        nonSpatialAudio.setBuffer(buffer);
+        nonSpatialAudio.setVolume(1);
+        listener.add(nonSpatialAudio);
+        audioSources.push(nonSpatialAudio);
+    });
 
-            const ambientLight = new THREE.AmbientLight(0xffffff, 1);
-            scene.add(ambientLight);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 1);
+    scene.add(ambientLight);
+}
+
 
             const listener = new THREE.AudioListener();
             camera.add(listener);
