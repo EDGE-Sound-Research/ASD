@@ -205,6 +205,16 @@
                 checkAllLoaded();
             }
 
+            // Non-spatial audio
+            const nonSpatialAudioUrl = 'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/AllStar_Game_FOH.mp3';
+            const nonSpatialAudio = new THREE.Audio(listener);
+            audioLoader.load(nonSpatialAudioUrl, (buffer) => {
+                nonSpatialAudio.setBuffer(buffer);
+                nonSpatialAudio.setVolume(1);
+                listener.add(nonSpatialAudio);
+                audioSources.push(nonSpatialAudio);
+            });
+
             function checkAllLoaded() {
                 if (isGLBLoaded && isVideoLoaded && allAudioLoaded) {
                     const startButton1 = document.getElementById('startButton1');
@@ -219,6 +229,9 @@
                     const delta = clock.getDelta();
                     if (mixer) {
                         mixer.update(delta);
+                    }
+                    if (video && video.readyState >= video.HAVE_CURRENT_DATA) {
+                        videoTexture.needsUpdate = true;
                     }
                     renderer.render(scene, camera);
                 });
