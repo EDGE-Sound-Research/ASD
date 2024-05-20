@@ -44,7 +44,7 @@
         const videoMaterial = new THREE.MeshBasicMaterial({ map: videoTexture, side: THREE.DoubleSide });
         const videoScreen = new THREE.Mesh(videoGeometry, videoMaterial);
 
-        videoScreen.position.set(0, 2, -5);
+        videoScreen.position.set(0, .2, -.5);
         videoScreen.rotation.y = Math.PI;
         videoScreen.scale.set(-0.1, 0.1, 0.1);
 
@@ -59,7 +59,7 @@
         const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 1000);
         renderer.xr.setReferenceSpaceType('local-floor');
         renderer.xr.enabled = true;
-        document.body.appendChild(XRButton.createButton(renderer, { requiredFeatures: ['hit-test', 'depth-sensing'] }));
+        document.body.appendChild(XRButton.createButton(renderer, { requiredFeatures: ['hit-test'] }));
 
         scene.background = null;
 
@@ -111,7 +111,7 @@
         loader.load('https://uploads-ssl.webflow.com/62585c8f3b855d70abac2fff/66464fdbb596dafdc5a82406_rtvse-asd.glb.txt', function (gltf) {
             court = gltf.scene;
             court.scale.set(0.1, 0.1, 0.1);
-            court.position.set(0, 0, -1); // Place court initially in front of the camera
+            court.position.set(0, 1, -1); // Place court initially in front of the camera
             scene.add(court);
 
             mixer = new THREE.AnimationMixer(court);
@@ -199,37 +199,23 @@
             const buttonMesh = new THREE.Mesh(buttonGeometry, buttonMaterial);
 
             buttonMesh.userData.onClick = onClick;
-            buttonMesh.userData.defaultScale = buttonMesh.scale.clone(); // Store default scale
 
             return buttonMesh;
         }
 
         function createStartButton() {
-            const startButton = createButton(0x00ff00, () => {
-                scaleButton(startButton);
-                startExperience();
-            });
+            const startButton = createButton(0x00ff00, startExperience);
             startButton.position.set(0, 0.1, -1); // In front of the user, on the floor
             scene.add(startButton);
         }
 
         function createResetButton() {
             const resetButton = createButton(0xff0000, () => {
-                scaleButton(resetButton);
                 stopExperience();
                 startExperience();
             });
-            resetButton.position.set(0.2, 0.1, -1); // In front of the user, on the floor
+            resetButton.position.set(0, 0.1, -1.2); // In front of the user, on the floor
             scene.add(resetButton);
-        }
-
-        function scaleButton(button) {
-            const tween = new TWEEN.Tween(button.scale)
-                .to({ x: button.userData.defaultScale.x * 1.2, y: button.userData.defaultScale.y * 1.2, z: button.userData.defaultScale.z * 1.2 }, 100)
-                .easing(TWEEN.Easing.Elastic.Out)
-                .yoyo(true)
-                .repeat(1)
-                .start();
         }
 
         function animate() {
@@ -241,7 +227,6 @@
                 if (video && video.readyState >= video.HAVE_CURRENT_DATA) {
                     videoTexture.needsUpdate = true;
                 }
-                TWEEN.update();
                 renderer.render(scene, camera);
             });
         }
@@ -331,10 +316,8 @@
 
                 if (intersects.length > 0) {
                     const intersect = intersects[0];
-                    const object = intersect.object;
-                    if (object.userData.onClick) {
-                        object.material.emissive.b = 1;
-                        intersected.push(object);
+                    if (intersect.object.userData.onClick) {
+                        intersect.object.userData.onClick();
                     }
                 }
             }
