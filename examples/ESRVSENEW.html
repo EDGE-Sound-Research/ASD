@@ -230,7 +230,7 @@
                 const offset = new THREE.Vector3(0, -2, -2);
                 offset.applyQuaternion(viewerRotation);
                 const spawnPoint = viewerPosition.clone().add(offset);
-                court.position.copy(spawnPoint);
+                court.position.set(spawnPoint.x, spawnPoint.y + 1.5, spawnPoint.z - 1.5); // Offset the court
             }
             renderer.render(scene, camera);
             frame.session.requestAnimationFrame(onAnimationFrame);
@@ -349,7 +349,8 @@
         scene.add(controllerGrip2);
 
         const lineGeometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -1)]);
-        const line = new THREE.Line(lineGeometry);
+        const lineMaterial = new THREE.LineBasicMaterial({ color: 0xff0000 });
+        const line = new THREE.Line(lineGeometry, lineMaterial);
         line.name = 'line';
         line.scale.z = 5;
 
@@ -372,7 +373,9 @@
             if (intersections.length > 0) {
                 const intersection = intersections[0];
                 const object = intersection.object;
-                object.material.emissive.r = 1;
+                if (object.material && object.material.emissive) {
+                    object.material.emissive.set(0xff0000); // Highlight color
+                }
                 intersected.push(object);
                 line.scale.z = intersection.distance;
             } else {
@@ -383,7 +386,9 @@
         function cleanIntersected() {
             while (intersected.length) {
                 const object = intersected.pop();
-                object.material.emissive.r = 0;
+                if (object.material && object.material.emissive) {
+                    object.material.emissive.set(0x000000); // Reset color
+                }
             }
         }
 
