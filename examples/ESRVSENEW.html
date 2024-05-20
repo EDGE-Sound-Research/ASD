@@ -19,6 +19,8 @@
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
         import { XRButton } from 'three/addons/webxr/XRButton.js';
         import { XRControllerModelFactory } from 'three/addons/webxr/XRControllerModelFactory.js';
+        import { FontLoader } from 'three/addons/loaders/FontLoader.js';
+        import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
 
         let isGLBLoaded = false;
         let isVideoLoaded = false;
@@ -111,6 +113,7 @@
         loader.load('https://uploads-ssl.webflow.com/62585c8f3b855d70abac2fff/66464fdbb596dafdc5a82406_rtvse-asd.glb.txt', function (gltf) {
             court = gltf.scene;
             court.scale.set(0.1, 0.1, 0.1);
+            court.position.set(0, 0, -5); // Place court initially in front of the camera
             scene.add(court);
 
             mixer = new THREE.AnimationMixer(court);
@@ -198,7 +201,7 @@
             const buttonMesh = new THREE.Mesh(buttonGeometry, buttonMaterial);
 
             const buttonText = createText(label, 0.1);
-            buttonText.position.set(0, 0, 0.01);
+            buttonText.position.set(-0.2, -0.05, 0.01);
             buttonMesh.add(buttonText);
 
             buttonMesh.userData.onClick = onClick;
@@ -207,7 +210,7 @@
         }
 
         function createText(text, size) {
-            const loader = new THREE.FontLoader();
+            const loader = new FontLoader();
             const font = loader.parse({
                 "type": "Font",
                 "data": {
@@ -252,7 +255,7 @@
                 }
             });
 
-            const textGeometry = new THREE.TextGeometry(text, {
+            const textGeometry = new TextGeometry(text, {
                 font: font,
                 size: size,
                 height: 0.02,
@@ -264,7 +267,7 @@
 
         function createStartButton() {
             const startButton = createButton("Start", startExperience);
-            startButton.position.set(0, 1, -2); // Adjust the position as needed
+            startButton.position.set(0, 0.5, -2); // Adjust the position as needed
             scene.add(startButton);
         }
 
@@ -273,7 +276,7 @@
                 stopExperience();
                 startExperience();
             });
-            resetButton.position.set(0, 0.5, -2); // Adjust the position as needed
+            resetButton.position.set(0, 0, -2); // Adjust the position as needed
             scene.add(resetButton);
         }
 
@@ -304,10 +307,11 @@
             if (viewerPose) {
                 const viewerPosition = viewerPose.transform.position;
                 const viewerRotation = viewerPose.transform.orientation;
-                const offset = new THREE.Vector3(0, 1.5, -2); // Adjust the offset for the court position
+                const offset = new THREE.Vector3(0, 0, -2); // Adjust the offset for the court position
                 offset.applyQuaternion(viewerRotation);
                 const spawnPoint = viewerPosition.clone().add(offset);
                 court.position.copy(spawnPoint);
+                court.position.y = 1.5; // Adjust height to be above the ground
             }
             renderer.render(scene, camera);
             frame.session.requestAnimationFrame(onAnimationFrame);
