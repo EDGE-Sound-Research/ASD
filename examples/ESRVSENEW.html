@@ -357,6 +357,7 @@
         controller2.add(line.clone());
 
         const raycaster = new THREE.Raycaster();
+        const intersected = [];
 
         function getIntersections(controller) {
             controller.updateMatrixWorld();
