@@ -41,6 +41,12 @@
         const audioSources = [];
         let mixer, video, videoTexture;
         let startButtonEnabled = false;
+		let isGLBLoaded = false;
+		let isVideoLoaded = false;
+		let allAudioLoaded = false;
+		let audioLoadedCount = 0;
+		let court;
+
 
         init();
         animate();
@@ -114,6 +120,16 @@ loader.load('https://uploads-ssl.webflow.com/62585c8f3b855d70abac2fff/66464fdbb5
                 }
             }
         });
+
+        // Once the model is loaded, set the flag and check all resources
+        isGLBLoaded = true;
+        checkAllLoaded();
+    } else {
+        console.error('Failed to load GLTF model.');
+    }
+}, undefined, function (error) {
+    console.error('An error occurred while loading the GLTF model:', error);
+});
 
         // Once the model is loaded, set the flag and check all resources
         isGLBLoaded = true;
