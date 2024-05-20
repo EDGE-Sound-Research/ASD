@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AR Experience</title>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "../build/three.module.js",
+                "three/addons/": "./jsm/"
+            }
+        }
+    </script>
+</head>
+<body>
+    <button class="startButton" id="startButton1" disabled>Start Experience</button>
+    <button id="resetButton">Reset Experience</button>
+    <script type="module">
+        import * as THREE from 'three';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+        import { TransformControls } from 'three/addons/controls/TransformControls.js';
+        import { XRButton } from 'three/addons/webxr/XRButton.js';
+        import { XRControllerModelFactory } from 'three/addons/webxr/XRControllerModelFactory.js';
+        import { XRHandModelFactory } from 'three/addons/webxr/XRHandModelFactory.js';
+
+        let camera, scene, renderer;
+        let controller1, controller2;
+        let controllerGrip1, controllerGrip2;
+        let raycaster;
+        const intersected = [];
+        let group, court, mixer, clock;
+        let isGLBLoaded = false, isVideoLoaded = false, allAudioLoaded = false, audioLoadedCount = 0;
+
+        const audioUrls = [
+            'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/Ball_Stem.mp3',
+            'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/Player1_Stem.mp3',
+            'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/Player2_Stem.mp3',
+            'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/Player3_Stem.mp3',
+            'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/Player4_Stem.mp3',
+            'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/Player5_Stem.mp3',
+            'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/Player6_Stem.mp3',
+            'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/NetL_Stem.mp3',
+            'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/NetR_Stem.mp3'
+        ];
+        const modelIDs = ['1', '2', '3', '4', '5', '6', '7', 'basket1', 'basket2'];
+        const audioSources = [];
+        const audioLoader = new THREE.AudioLoader();
+
+        init();
+        animate();
+
+        function init() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 10);
+            camera.position.set(0, 1.6, 3);
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.xr.enabled = true;
+            document.body.appendChild(renderer.domElement);
+            document.body.appendChild(XRButton.createButton(renderer));
+
+            group = new THREE.Group();
+            scene.add(group);
+
+            const floorGeometry = new THREE.PlaneGeometry(6, 6);
+            const floorMaterial = new THREE.ShadowMaterial({ opacity: 0.25 });
+            const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+            floor.rotation.x = -Math.PI / 2;
+            floor.receiveShadow = true;
+            scene.add(floor);
+
+            const light = new THREE.DirectionalLight(0xffffff, 3);
+            light.position.set(0, 6, 0);
+            light.castShadow = true;
+            light.shadow.camera.top = 3;
+            light.shadow.camera.bottom = -3;
+            light.shadow.camera.right = 3;
+            light.shadow.camera.left = -3;
+            light.shadow.mapSize.set(4096, 4096);
+            scene.add(light);
+
+            // Hand tracking and controllers
+            const handModelFactory = new XRHandModelFactory();
+            const controllerModelFactory = new XRControllerModelFactory();
+
+            controller1 = renderer.xr.getController(0);
+            controller1.addEventListener('selectstart', onSelectStart);
+            controller1.addEventListener('selectend', onSelectEnd);
+            scene.add(controller1);
+
+            controller2 = renderer.xr.getController(1);
+            controller2.addEventListener('selectstart', onSelectStart);
+            controller2.addEventListener('selectend', onSelectEnd);
+            scene.add(controller2);
+
+            controllerGrip1 = renderer.xr.getControllerGrip(0);
+            controllerGrip1.add(controllerModelFactory.createControllerModel(controllerGrip1));
+            scene.add(controllerGrip1);
+
+            controllerGrip2 = renderer.xr.getControllerGrip(1);
+            controllerGrip2.add(controllerModelFactory.createControllerModel(controllerGrip2));
+            scene.add(controllerGrip2);
+
+            const hand1 = renderer.xr.getHand(0);
+            hand1.add(handModelFactory.createHandModel(hand1));
+            scene.add(hand1);
+
+            const hand2 = renderer.xr.getHand(1);
+            hand2.add(handModelFactory.createHandModel(hand2));
+            scene.add(hand2);
+
+            const geometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -1)]);
+            const line = new THREE.Line(geometry);
+            line.name = 'line';
+            line.scale.z = 5;
+
+            controller1.add(line.clone());
+            controller2.add(line.clone());
+
+            raycaster = new THREE.Raycaster();
+
+            window.addEventListener('resize', onWindowResize);
+
+            // Load the GLTF model
+            const loader = new GLTFLoader();
+            clock = new THREE.Clock();
+            loader.load('https://uploads-ssl.webflow.com/62585c8f3b855d70abac2fff/66464fdbb596dafdc5a82406_rtvse-asd.glb.txt', function (gltf) {
+                court = gltf.scene;
+                court.scale.set(0.1, 0.1, 0.1);
+                scene.add(court);
+                mixer = new THREE.AnimationMixer(court);
+                gltf.animations.forEach((clip) => {
+                    mixer.clipAction(clip).play();
+                });
+                court.traverse((child) => {
+                    const index = modelIDs.indexOf(child.name);
+                    if (index !== -1) {
+                        audioLoader.load(audioUrls[index], (buffer) => {
+                            const audio = new THREE.PositionalAudio(listener);
+                            audio.setBuffer(buffer);
+                            audio.setRefDistance(1);
+                            audio.setDistanceModel('exponential');
+                            audio.setRolloffFactor(2.5);
+                            child.add(audio);
+                            audioSources.push(audio);
+                            audioLoadedCount++;
+                            if (audioLoadedCount === audioUrls.length) {
+                                allAudioLoaded = true;
+                                checkAllLoaded();
+                            }
+                        }, undefined, function (error) {
+                            console.error(`Error loading audio for model ${child.name}:`, error);
+                        });
+                    }
+                });
+                isGLBLoaded = true;
+                checkAllLoaded();
+            }, undefined, function (error) {
+                console.error('An error happened during the loading of the GLB:', error);
+            });
+
+            // Non-spatial audio
+            const nonSpatialAudioUrl = 'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/AllStar_Game_FOH.mp3';
+            const nonSpatialAudio = new THREE.Audio(listener);
+            audioLoader.load(nonSpatialAudioUrl, (buffer) => {
+                nonSpatialAudio.setBuffer(buffer);
+                nonSpatialAudio.setVolume(1);
+                listener.add(nonSpatialAudio);
+                audioSources.push(nonSpatialAudio);
+            });
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 1);
+            scene.add(ambientLight);
+
+            const listener = new THREE.AudioListener();
+            camera.add(listener);
+
+            video.addEventListener('canplaythrough', () => {
+                isVideoLoaded = true;
+                checkAllLoaded();
+            });
+
+            if (video.readyState >= 4) {
+                isVideoLoaded = true;
+                checkAllLoaded();
+            }
+
+            function checkAllLoaded() {
+                if (isGLBLoaded && isVideoLoaded && allAudioLoaded) {
+                    const startButton1 = document.getElementById('startButton1');
+                    if (startButton1) {
+                        startButton1.disabled = false;
+                    }
+                }
+            }
+
+            function animate() {
+                renderer.setAnimationLoop(() => {
+                    const delta = clock.getDelta();
+                    if (mixer) {
+                        mixer.update(delta);
+                    }
+                    renderer.render(scene, camera);
+                });
+            }
+
+            function onSelectStart(event) {
+                const controller = event.target;
+                const intersections = getIntersections(controller);
+                if (intersections.length > 0) {
+                    const intersection = intersections[0];
+                    const object = intersection.object;
+                    object.material.emissive.b = 1;
+                    controller.attach(object);
+                    controller.userData.selected = object;
+                }
+                controller.userData.targetRayMode = event.data.targetRayMode;
+            }
+
+            function onSelectEnd(event) {
+                const controller = event.target;
+                if (controller.userData.selected !== undefined) {
+                    const object = controller.userData.selected;
+                    object.material.emissive.b = 0;
+                    group.attach(object);
+                    controller.userData.selected = undefined;
+                }
+            }
+
+            function getIntersections(controller) {
+                controller.updateMatrixWorld();
+                raycaster.setFromCamera({ x: 0, y: 0 }, camera);
+                return raycaster.intersectObjects(group.children, false);
+            }
+
+            function onWindowResize() {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            }
+
+            document.getElementById('resetButton').addEventListener('click', () => {
+                stopExperience();
+                startExperience();
+            });
+
+            document.getElementById('startButton1').addEventListener('click', startButtonFunctionality);
+
+            document.addEventListener('visibilitychange', () => {
+                if (document.hidden) {
+                    stopExperience();
+                }
+            });
+
+            window.addEventListener('resize', onWindowResize, false);
+        }
+
+        function stopExperience() {
+            if (mixer) {
+                mixer.stopAllAction();
+                mixer._actions.forEach(action => {
+                    action.stop();
+                    action.reset();
+                });
+            }
+            audioSources.forEach(audio => audio.stop());
+            video.pause();
+            video.currentTime = 0;
+        }
+
+        let experienceTimer;
+        const totalDuration = 120;
+
+        function startExperience() {
+            clearTimeout(experienceTimer);
+            experienceTimer = setTimeout(stopExperience, totalDuration * 1000);
+            if (mixer) {
+                mixer.stopAllAction();
+                mixer.update(0);
+                mixer._actions.forEach(action => {
+                    action.reset();
+                    action.play();
+                });
+            }
+            audioSources.forEach(audio => {
+                if (!audio.isPlaying) {
+                    audio.play();
+                }
+            });
+            const videoElement = document.getElementById('videoElement');
+            if (videoElement) {
+                videoElement.play();
+            } else {
+                video.play();
+            }
+            animate();
+        }
+
+        function startButtonFunctionality() {
+            document.querySelectorAll('.startButton').forEach(button => {
+                button.style.display = 'none';
+            });
+            const audioContext = THREE.AudioContext.getContext();
+            if (audioContext.state === 'suspended') {
+                audioContext.resume().then(() => {
+                    audioSources.forEach(audio => {
+                        if (!audio.isPlaying) {
+                            audio.play();
+                        }
+                    });
+                    video.play();
+                }).catch(error => {
+                    console.error("Error resuming audio context:", error);
+                });
+            } else {
+                audioSources.forEach(audio => {
+                    if (!audio.isPlaying) {
+                        audio.play();
+                    }
+                });
+                video.play();
+            }
+            startExperience();
+        }
+    </script>
+</body>
+</html>
