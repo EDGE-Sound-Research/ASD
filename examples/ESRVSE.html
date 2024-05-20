@@ -22,7 +22,6 @@
         import { TransformControls } from 'three/addons/controls/TransformControls.js';
         import { ARButton } from 'three/addons/webxr/ARButton.js';
         import { XRHandModelFactory } from 'three/addons/webxr/XRHandModelFactory.js';
-        import { XRControllerModelFactory } from 'three/addons/webxr/XRControllerModelFactory.js';
 
         let camera, scene, renderer;
         let controller1, controller2, controllerGrip1, controllerGrip2;
@@ -58,7 +57,7 @@
         renderer.xr.enabled = true;
         renderer.xr.setReferenceSpaceType('local-floor');
         document.body.appendChild(renderer.domElement);
-        document.body.appendChild(ARButton.createButton(renderer, { requiredFeatures: ['hit-test'] }));
+        document.body.appendChild(ARButton.createButton(renderer, { requiredFeatures: ['hit-test', 'hand-tracking'] }));
         scene.background = null;
         const listener = new THREE.AudioListener();
         camera.add(listener);
@@ -109,29 +108,33 @@
 
         // HAND TRACKING SETUP
         const handModelFactory = new XRHandModelFactory();
+        const controllerModelFactory = new XRControllerModelFactory();
+
         controller1 = renderer.xr.getController(0);
         controller1.addEventListener('selectstart', onSelectStart);
         controller1.addEventListener('selectend', onSelectEnd);
-        controller1.addEventListener('squeezestart', onSqueezeStart);
-        controller1.addEventListener('squeezeend', onSqueezeEnd);
-        controller1.userData.isSelecting = false;
         scene.add(controller1);
 
         controller2 = renderer.xr.getController(1);
         controller2.addEventListener('selectstart', onSelectStart);
         controller2.addEventListener('selectend', onSelectEnd);
-        controller2.addEventListener('squeezestart', onSqueezeStart);
-        controller2.addEventListener('squeezeend', onSqueezeEnd);
-        controller2.userData.isSelecting = false;
         scene.add(controller2);
 
         controllerGrip1 = renderer.xr.getControllerGrip(0);
-        controllerGrip1.add(handModelFactory.createHandModel(controllerGrip1));
+        controllerGrip1.add(controllerModelFactory.createControllerModel(controllerGrip1));
         scene.add(controllerGrip1);
 
         controllerGrip2 = renderer.xr.getControllerGrip(1);
-        controllerGrip2.add(handModelFactory.createHandModel(controllerGrip2));
+        controllerGrip2.add(controllerModelFactory.createControllerModel(controllerGrip2));
         scene.add(controllerGrip2);
+
+        const hand1 = renderer.xr.getHand(0);
+        hand1.add(handModelFactory.createHandModel(hand1));
+        scene.add(hand1);
+
+        const hand2 = renderer.xr.getHand(1);
+        hand2.add(handModelFactory.createHandModel(hand2));
+        scene.add(hand2);
 
         // TRANSFORM CONTROLS
         controls = new TransformControls(camera, renderer.domElement);
@@ -259,16 +262,6 @@
                 controls.detach();
                 controller.userData.selected = undefined;
             }
-        }
-
-        function onSqueezeStart(event) {
-            const controller = event.target;
-            controller.userData.isSelecting = true;
-        }
-
-        function onSqueezeEnd(event) {
-            const controller = event.target;
-            controller.userData.isSelecting = false;
         }
 
         function getIntersections(controller) {
