@@ -46,13 +46,13 @@
                 this.queries.buttons.results.forEach(entity => {
                     const button = entity.getMutableComponent(Button);
                     const buttonMesh = entity.getComponent(Object3D).object;
-                    if (button.currState == 'none') {
+                    if (button.currState === 'none') {
                         buttonMesh.scale.set(1, 1, 1);
                     } else {
                         buttonMesh.scale.set(1.1, 1.1, 1.1);
                     }
 
-                    if (button.currState == 'pressed' && button.prevState != 'pressed') {
+                    if (button.currState === 'pressed' && button.prevState !== 'pressed') {
                         button.action();
                     }
 
@@ -83,7 +83,7 @@
                         const object = entity.getComponent(Object3D).object;
                         const intersections = hp.intersectObject(object, false);
                         if (intersections && intersections.length > 0) {
-                            if (distance == null || intersections[0].distance < distance) {
+                            if (distance === null || intersections[0].distance < distance) {
                                 distance = intersections[0].distance;
                                 intersectingEntity = entity;
                             }
@@ -91,11 +91,11 @@
                     });
                     if (distance) {
                         hp.setCursor(distance);
-                        if (intersectingEntity.hasComponent(Button)) {
+                        if (intersectingEntity && intersectingEntity.hasComponent(Button)) {
                             const button = intersectingEntity.getMutableComponent(Button);
                             if (hp.isPinched()) {
                                 button.currState = 'pressed';
-                            } else if (button.currState != 'pressed') {
+                            } else if (button.currState !== 'pressed') {
                                 button.currState = 'hovered';
                             }
                         }
@@ -218,7 +218,8 @@
                 scene.add(court);
                 mixer = new THREE.AnimationMixer(court);
                 gltf.animations.forEach((clip) => {
-                    mixer.clipAction(clip).play();
+                    const action = mixer.clipAction(clip);
+                    action.paused = true; // Prevent autoplay
                 });
 
                 video = document.createElement('video');
