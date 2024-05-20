@@ -43,7 +43,7 @@
         const material = new THREE.MeshBasicMaterial({ map: videoTexture, side: THREE.DoubleSide });
         const videoScreen = new THREE.Mesh(geometry, material);
         // Set position and rotation of the video screen relative to the camera
-        videoScreen.position.set(0, .9, -2); // Adjust position as needed
+        videoScreen.position.set(0, .9, -1); // Adjust position as needed
         videoScreen.rotation.y = Math.PI; // Adjust rotation if needed
         videoScreen.scale.set(-.1, .1, .1);
         // Set up scene, camera, renderer
