@@ -391,6 +391,7 @@
 
             execute() {
                 this.handPointers.forEach(hp => {
+                    if (typeof hp.intersectObject !== 'function') return; // Fix the intersectObject is not a function error
                     let distance = null;
                     let intersectingEntity = null;
                     this.queries.intersectable.results.forEach(entity => {
