@@ -396,7 +396,7 @@
                     let intersectingEntity = null;
                     this.queries.intersectable.results.forEach(entity => {
                         const object = entity.getComponent(Object3D).object;
-                        const intersections = hp.intersectObject(object, false);
+                        const intersections = raycaster.intersectObject(object, false);
                         if (intersections && intersections.length > 0) {
                             if (distance == null || intersections[0].distance < distance) {
                                 distance = intersections[0].distance;
@@ -405,27 +405,27 @@
                         }
                     });
                     if (distance) {
-                        hp.setCursor(distance);
+                        if (hp.setCursor) hp.setCursor(distance);  // Check if setCursor method exists
                         if (intersectingEntity.hasComponent(Draggable)) {
                             const draggable = intersectingEntity.getMutableComponent(Draggable);
                             const object = intersectingEntity.getComponent(Object3D).object;
                             object.scale.set(1.1, 1.1, 1.1);
-                            if (hp.isPinched()) {
-                                if (!hp.isAttached() && draggable.state != 'attached') {
+                            if (hp.isPinched && hp.isPinched()) {  // Check if isPinched method exists
+                                if (!hp.isAttached && !hp.isAttached() && draggable.state != 'attached') {  // Check if isAttached method exists
                                     draggable.state = 'to-be-attached';
                                     draggable.attachedPointer = hp;
-                                    hp.setAttached(true);
+                                    if (hp.setAttached) hp.setAttached(true);  // Check if setAttached method exists
                                 }
                             } else {
-                                if (hp.isAttached() && draggable.state == 'attached') {
+                                if (hp.isAttached && hp.isAttached() && draggable.state == 'attached') {  // Check if isAttached method exists
                                     draggable.state = 'to-be-detached';
                                     draggable.attachedPointer = null;
-                                    hp.setAttached(false);
+                                    if (hp.setAttached) hp.setAttached(false);  // Check if setAttached method exists
                                 }
                             }
                         }
                     } else {
-                        hp.setCursor(1.5);
+                        if (hp.setCursor) hp.setCursor(1.5);  // Check if setCursor method exists
                     }
                 });
             }
@@ -442,18 +442,22 @@
                 this.queries.draggable.results.forEach(entity => {
                     const draggable = entity.getMutableComponent(Draggable);
                     const object = entity.getComponent(Object3D).object;
-                    if (draggable.originalParent == null) {
+                    if (draggable.originalParent == null && object.parent != null) {
                         draggable.originalParent = object.parent;
                     }
 
                     switch (draggable.state) {
                         case 'to-be-attached':
-                            draggable.attachedPointer.attach(object);
-                            draggable.state = 'attached';
+                            if (draggable.attachedPointer && draggable.attachedPointer.attach) {
+                                draggable.attachedPointer.attach(object);
+                                draggable.state = 'attached';
+                            }
                             break;
                         case 'to-be-detached':
-                            draggable.originalParent.attach(object);
-                            draggable.state = 'detached';
+                            if (draggable.originalParent && draggable.originalParent.attach) {
+                                draggable.originalParent.attach(object);
+                                draggable.state = 'detached';
+                            }
                             break;
                         default:
                             object.scale.set(1, 1, 1);
