@@ -33,8 +33,6 @@
         const clock = new THREE.Clock();
         let experienceTimer;
         const totalDuration = 120;
-        const intersected = [];
-        const hoveredObjects = new Set();
 
         const video = document.createElement('video');
         video.crossOrigin = "anonymous";
@@ -48,7 +46,7 @@
         videoTexture.format = THREE.RGBAFormat;
 
         const geometry = new THREE.PlaneGeometry(4, 2.25);
-        const material = new THREE.MeshBasicMaterial({ map: videoTexture, side: THREE.DoubleSide });
+        const material = new THREE.MeshStandardMaterial({ map: videoTexture, side: THREE.DoubleSide });
         const videoScreen = new THREE.Mesh(geometry, material);
 
         videoScreen.position.set(0, .9, -1.5);
@@ -121,6 +119,16 @@
             });
 
             court.traverse((child) => {
+                if (child.isMesh && child.material) {
+                    if (child.name === 'courtPlane') {
+                        // Keep the original material for the court plane
+                        child.material = new THREE.MeshStandardMaterial({ map: videoTexture });
+                    } else {
+                        // Set standard material for other models
+                        child.material = new THREE.MeshStandardMaterial({ color: 0x808080 });
+                    }
+                }
+
                 const index = modelIDs.indexOf(child.name);
                 if (index !== -1) {
                     audioLoader.load(audioUrls[index], (buffer) => {
@@ -243,44 +251,45 @@
         }
 
         function stopExperience() {
-    if (mixer) {
-        mixer.stopAllAction();
-        mixer._actions.forEach(action => {
-            action.stop();
-            action.reset();
-        });
-    }
-    audioSources.forEach(audio => {
-        if (audio.isPlaying) {
-            audio.stop();
+            if (mixer) {
+                mixer.stopAllAction();
+                mixer._actions.forEach(action => {
+                    action.stop();
+                    action.reset();
+                });
+            }
+            audioSources.forEach(audio => {
+                if (audio.isPlaying) {
+                    audio.stop();
+                }
+            });
+            video.pause();
+            video.currentTime = 0;
         }
-    });
-    video.pause();
-    video.currentTime = 0;
-}
 
-function startExperience() {
-    clearTimeout(experienceTimer);
-    experienceTimer = setTimeout(stopExperience, totalDuration * 1000);
+        function startExperience() {
+            clearTimeout(experienceTimer);
+            experienceTimer = setTimeout(stopExperience, totalDuration * 1000);
 
-    if (mixer) {
-        mixer.stopAllAction();
-        mixer.update(0);
-        mixer._actions.forEach(action => {
-            action.reset();
-            action.play();
-        });
-    }
+            if (mixer) {
+                mixer.stopAllAction();
+                mixer.update(0);
+                mixer._actions.forEach(action => {
+                    action.reset();
+                    action.play();
+                });
+            }
 
-    audioSources.forEach(audio => {
-        if (!audio.isPlaying) {
-            audio.play();
+            audioSources.forEach(audio => {
+                if (!audio.isPlaying) {
+                    audio.play();
+                }
+            });
+
+            video.play();
+            animate();
         }
-    });
 
-    video.play();
-    animate();
-}
         document.getElementById('startButton1').addEventListener('click', () => {
             startExperience();
         });
@@ -331,7 +340,7 @@ function startExperience() {
         window.addEventListener('resize', onWindowResize, false);
 
         const resetButtonGeometry = new THREE.BoxGeometry(0.2, 0.1, 0.05);
-        const resetButtonMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+        const resetButtonMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 });
         const resetButtonMesh = new THREE.Mesh(resetButtonGeometry, resetButtonMaterial);
         resetButtonMesh.position.set(0.2, 1.5, -1);
         resetButtonMesh.name = 'resetButtonMesh';
@@ -372,7 +381,6 @@ function startExperience() {
                 const intersect = intersections[0];
                 if (intersect.object.name === 'resetButtonMesh') {
                     intersect.object.material.color.set(0x00ff00);
-                    hoveredObjects.add(intersect.object);
                     if (controller.userData.isSelecting) {
                         stopExperience();
                         startExperience();
@@ -380,7 +388,6 @@ function startExperience() {
                     }
                 } else if (intersect.object.name === 'startButtonMesh') {
                     intersect.object.material.color.set(0x00ff00);
-                    hoveredObjects.add(intersect.object);
                     if (controller.userData.isSelecting) {
                         startExperience();
                         intersect.object.material.color.set(0xff0000); // Reset color after selection
@@ -390,11 +397,6 @@ function startExperience() {
             } else {
                 controller.getObjectByName('line').scale.z = 5;
             }
-        }
-
-        function cleanHovered() {
-            hoveredObjects.forEach(obj => obj.material.color.set(0xff0000));
-            hoveredObjects.clear();
         }
 
         function onSelectStart(event) {
@@ -443,21 +445,20 @@ function startExperience() {
             }
         }
 
-    renderer.setAnimationLoop(() => {
-    cleanHovered();
-    handleController(controller1);
-    handleController(controller2);
-    handlePinch(hand1);
-    handlePinch(hand2);
-    const delta = clock.getDelta();
-    if (mixer) {
-        mixer.update(delta);
-    }
-    if (video.readyState >= video.HAVE_CURRENT_DATA) {
-        videoTexture.needsUpdate = true;
-    }
-    renderer.render(scene, camera);
-});
+        renderer.setAnimationLoop(() => {
+            handleController(controller1);
+            handleController(controller2);
+            handlePinch(hand1);
+            handlePinch(hand2);
+            const delta = clock.getDelta();
+            if (mixer) {
+                mixer.update(delta);
+            }
+            if (video.readyState >= video.HAVE_CURRENT_DATA) {
+                videoTexture.needsUpdate = true;
+            }
+            renderer.render(scene, camera);
+        });
     </script>
 </body>
 </html>
