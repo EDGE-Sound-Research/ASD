@@ -131,7 +131,8 @@
         loader.load('https://raw.githubusercontent.com/zpennachi/three.js/master/examples/nba-as-final.glb', function (gltf) {
             court = gltf.scene;
             court.scale.set(0.1, 0.1, 0.1);
-            court.position.set(0, 0, 0);
+            court.position.set(0, .7, -1);
+            scene.add(court);
 
             mixer = new THREE.AnimationMixer(court);
             gltf.animations.forEach((clip) => {
@@ -398,17 +399,6 @@
 
         raycaster = new THREE.Raycaster();
 
-        // Add invisible cube
-        const invisibleCubeGeometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
-        const invisibleCubeMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00, visible: false });
-        const courtParent = new THREE.Mesh(invisibleCubeGeometry, invisibleCubeMaterial);
-        courtParent.position.set(0, 0.7, -1);
-        scene.add(courtParent);
-
-        // Attach court and video screen to the invisible cube
-        courtParent.add(court);
-        courtParent.add(videoScreen);
-
         // Add test cubes
         const cubeColors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00];
         const cubes = [];
@@ -425,7 +415,15 @@
             cubes.push(cube);
         }
 
-        const draggableObjects = [...cubes, courtParent];
+        // Create a draggable cube and attach it to the court
+        const draggableCubeGeometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
+        const draggableCubeMaterial = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
+        const draggableCube = new THREE.Mesh(draggableCubeGeometry, draggableCubeMaterial);
+        draggableCube.position.set(0, 1.5, -1);
+        scene.add(draggableCube);
+        court.add(draggableCube);
+
+        const draggableObjects = [...cubes, draggableCube];
 
         function getIntersections(controller) {
             const tempMatrix = new THREE.Matrix4();
