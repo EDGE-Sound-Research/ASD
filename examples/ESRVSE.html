@@ -413,6 +413,7 @@
 
         // Add static cubes as buttons
         const cubeColors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00];
+        const buttonCubes = [];
         for (let i = 0; i < 4; i++) {
             const cubeGeometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
             const cubeMaterial = new THREE.MeshStandardMaterial({ color: cubeColors[i] });
@@ -423,6 +424,7 @@
             const zPos = -2;
             cube.position.set(xPos, yPos, zPos);
             sceneParent.add(cube);
+            buttonCubes.push(cube);
         }
 
         const draggableObjects = [draggableCube];
@@ -485,6 +487,32 @@
                 object.material.emissive.setHex(0x000000);
             }
         }
+
+        function onButtonCubeHoverStart(cube) {
+            cube.material.emissive.setHex(0xff0000);
+        }
+
+        function onButtonCubeHoverEnd(cube) {
+            cube.material.emissive.setHex(0x000000);
+        }
+
+        function onButtonCubeSelect(cube) {
+            // Call the reset experience functionality
+            stopExperience();
+            startExperience();
+        }
+
+        // Add hover and select interaction to button cubes
+        function addButtonCubeInteractions() {
+            buttonCubes.forEach(cube => {
+                cube.userData.isButton = true;
+                cube.userData.hoverStart = () => onButtonCubeHoverStart(cube);
+                cube.userData.hoverEnd = () => onButtonCubeHoverEnd(cube);
+                cube.userData.select = () => onButtonCubeSelect(cube);
+            });
+        }
+
+        addButtonCubeInteractions();
 
         renderer.setAnimationLoop(() => {
             const delta = clock.getDelta();
