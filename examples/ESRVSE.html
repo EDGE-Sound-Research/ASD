@@ -20,93 +20,65 @@
         import * as THREE from 'three';
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
         import { XRButton } from 'three/addons/webxr/XRButton.js';
+        import { XRHandModelFactory } from 'three/addons/webxr/XRHandModelFactory.js';
 
         let isGLBLoaded = false;
         let isVideoLoaded = false;
         let allAudioLoaded = false;
         let audioLoadedCount = 0;
-        let court, scene, camera, renderer, mixer, videoTexture, clock, listener;
-        let experienceTimer; // Declare experienceTimer globally
+        let court;
+        let mixer;
         const audioSources = [];
+        const clock = new THREE.Clock(); // Clock for managing animation frame updates
+        let experienceTimer; // Declare experienceTimer globally
         const totalDuration = 120; // Or set this dynamically based on your animation duration
-        const modelIDs = ['1', '2', '3', '4', '5', '6', '7', 'basket1', 'basket2'];
-        const audioUrls = [
-            'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/Ball_Stem.mp3',
-            'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/Player1_Stem.mp3',
-            'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/Player2_Stem.mp3',
-            'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/Player3_Stem.mp3',
-            'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/Player4_Stem.mp3',
-            'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/Player5_Stem.mp3',
-            'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/Player6_Stem.mp3',
-            'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/NetL_Stem.mp3',
-            'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/NetR_Stem.mp3' // Add the URL for basket1
-        ];
 
+        // VIDEO STUFF
         const video = document.createElement('video');
         video.crossOrigin = "anonymous";
         video.preload = 'auto';
         video.load();
         video.muted = true;
 
-        function init() {
-            // Set up scene, camera, renderer
-            scene = new THREE.Scene();
-            camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(0, 2, 6);
-            scene.background = null;
+        // Create a texture from the video element
+        const videoTexture = new THREE.VideoTexture(video);
+        videoTexture.minFilter = THREE.LinearFilter;
+        videoTexture.magFilter = THREE.LinearFilter;
+        videoTexture.format = THREE.RGBAFormat;
 
-            renderer = new THREE.WebGLRenderer({ alpha: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.xr.enabled = true; // Enable WebXR on the renderer
-            document.body.appendChild(renderer.domElement);
+        // Create a plane geometry that will use the video texture
+        const geometry = new THREE.PlaneGeometry(4, 2.25); // 16:9 aspect ratio, adjust size as needed
+        const material = new THREE.MeshBasicMaterial({ map: videoTexture, side: THREE.DoubleSide });
+        const videoScreen = new THREE.Mesh(geometry, material);
 
-            document.body.appendChild(XRButton.createButton(renderer, { requiredFeatures: ['hit-test'] }));
+        // Set position and rotation of the video screen relative to the camera
+        videoScreen.position.set(0, .9, -1.5); // Adjust position as needed
+        videoScreen.rotation.y = Math.PI; // Adjust rotation if needed
+        videoScreen.scale.set(-.2, .2, .2);
 
-            listener = new THREE.AudioListener();
-            camera.add(listener);
+        // Set up scene, camera, renderer
+        const scene = new THREE.Scene();
+        scene.add(videoScreen);
+        const renderer = new THREE.WebGLRenderer({ alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
 
-            clock = new THREE.Clock(); // Clock for managing animation frame updates
+        const listener = new THREE.AudioListener();
+        const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 1000);
+        renderer.xr.setReferenceSpaceType('local-floor'); // or 'local-floor' based on your needs
+        renderer.xr.enabled = true;
+        document.body.appendChild(XRButton.createButton(renderer, { requiredFeatures: ['hit-test'] }));
+        scene.background = null;
 
-            // Create a texture from the video element
-            videoTexture = new THREE.VideoTexture(video);
-            videoTexture.minFilter = THREE.LinearFilter;
-            videoTexture.magFilter = THREE.LinearFilter;
-            videoTexture.format = THREE.RGBAFormat;
+        // Set initial camera position and rotation to match the "center" position
+        const initialCameraPosition = new THREE.Vector3(0, 2, 6); // Center position
+        const initialCameraRotation = new THREE.Euler(0, THREE.MathUtils.degToRad(0), 0); // Center rotation
+        camera.position.copy(initialCameraPosition);
+        camera.rotation.copy(initialCameraRotation);
+        camera.updateProjectionMatrix(); // Update projection matrix if needed
+        camera.add(listener); // Attach audio listener to the camera
 
-            // Create a plane geometry that will use the video texture
-            const geometry = new THREE.PlaneGeometry(4, 2.25); // 16:9 aspect ratio, adjust size as needed
-            const material = new THREE.MeshBasicMaterial({ map: videoTexture, side: THREE.DoubleSide });
-            const videoScreen = new THREE.Mesh(geometry, material);
-
-            // Set position and rotation of the video screen relative to the camera
-            videoScreen.position.set(0, .9, -1.5); // Adjust position as needed
-            videoScreen.rotation.y = Math.PI; // Adjust rotation if needed
-            videoScreen.scale.set(-.2, .2, .2);
-
-            scene.add(videoScreen);
-
-            // Load non-spatialized audio track
-            const nonSpatialAudioUrl = 'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/AllStar_Game_FOH.mp3';
-            const nonSpatialAudio = new THREE.Audio(listener);
-            const nonSpatialAudioLoader = new THREE.AudioLoader();
-            nonSpatialAudioLoader.load(nonSpatialAudioUrl, (buffer) => {
-                nonSpatialAudio.setBuffer(buffer);
-                nonSpatialAudio.setVolume(1);
-                listener.add(nonSpatialAudio); // Add audio to the listener
-                audioSources.push(nonSpatialAudio); // Add to list of audio sources for management
-            });
-
-            // Add lights to the scene
-            const ambientLight = new THREE.AmbientLight(0xffffff, 1);
-            scene.add(ambientLight);
-            const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-            directionalLight.position.set(0, 20, 10);
-            scene.add(directionalLight);
-
-            preloadVideo('https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/NBA_AllStar_Demo_Clip%20(2).mp4');
-            loadGLTFModel();
-        }
-
+        // Preload video
         function preloadVideo(url) {
             const req = new XMLHttpRequest();
             req.open('GET', url, true);
@@ -124,52 +96,84 @@
             };
             req.send();
         }
+        preloadVideo('https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/NBA_AllStar_Demo_Clip%20(2).mp4');
 
-        function loadGLTFModel() {
-            const loader = new GLTFLoader();
-            loader.load('https://uploads-ssl.webflow.com/62585c8f3b855d70abac2fff/66464fdbb596dafdc5a82406_rtvse-asd.glb.txt', function (gltf) {
-                court = gltf.scene;
-                court.scale.set(0.1, 0.1, 0.1); // Set the scale to 0.1 for AR
-                court.position.set(0, .7, -1);
-                scene.add(court);
+        // Load audio files
+        const audioUrls = [
+            'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/Ball_Stem.mp3',
+            'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/Player1_Stem.mp3',
+            'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/Player2_Stem.mp3',
+            'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/Player3_Stem.mp3',
+            'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/Player4_Stem.mp3',
+            'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/Player5_Stem.mp3',
+            'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/Player6_Stem.mp3',
+            'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/NetL_Stem.mp3',
+            'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/NetR_Stem.mp3' // Add the URL for basket1
+        ];
+        const modelIDs = ['1', '2', '3', '4', '5', '6', '7', 'basket1', 'basket2'];
+        const audioLoader = new THREE.AudioLoader();
 
-                // Animation Mixer
-                mixer = new THREE.AnimationMixer(court);
-                gltf.animations.forEach((clip) => {
-                    mixer.clipAction(clip).play();
-                });
+        // Load the GLTF model with animations
+        const loader = new GLTFLoader();
+        loader.load('https://uploads-ssl.webflow.com/62585c8f3b855d70abac2fff/66464fdbb596dafdc5a82406_rtvse-asd.glb.txt', function (gltf) {
+            court = gltf.scene;
+            court.scale.set(0.1, 0.1, 0.1); // Set the scale to 0.1 for AR
+            court.position.set(0, .7, -1);
+            scene.add(court);
 
-                const audioLoader = new THREE.AudioLoader();
-                court.traverse((child) => {
-                    const index = modelIDs.indexOf(child.name);
-                    if (index !== -1) {
-                        audioLoader.load(audioUrls[index], (buffer) => {
-                            const audio = new THREE.PositionalAudio(listener);
-                            audio.setBuffer(buffer);
-                            audio.setRefDistance(1);
-                            audio.setDistanceModel('exponential');
-                            audio.setRolloffFactor(2.5);
-                            child.add(audio);
-                            audioSources.push(audio);
-                            // Increment the loaded count and check if all audio is loaded
-                            audioLoadedCount++;
-                            if (audioLoadedCount === audioUrls.length) {
-                                allAudioLoaded = true;
-                                checkAllLoaded();
-                            }
-                        }, undefined, function (error) {
-                            console.error(`Error loading audio for model ${child.name}:`, error);
-                        });
-                    }
-                });
-
-                // Once the model is loaded, set the flag and check all resources
-                isGLBLoaded = true;
-                checkAllLoaded();
-            }, undefined, function (error) {
-                console.error('An error happened during the loading of the GLB:', error);
+            // Animation Mixer
+            mixer = new THREE.AnimationMixer(court);
+            gltf.animations.forEach((clip) => {
+                mixer.clipAction(clip).play();
             });
-        }
+
+            court.traverse((child) => {
+                const index = modelIDs.indexOf(child.name);
+                if (index !== -1) {
+                    audioLoader.load(audioUrls[index], (buffer) => {
+                        const audio = new THREE.PositionalAudio(listener);
+                        audio.setBuffer(buffer);
+                        audio.setRefDistance(1);
+                        audio.setDistanceModel('exponential');
+                        audio.setRolloffFactor(2.5);
+                        child.add(audio);
+                        audioSources.push(audio);
+                        // Increment the loaded count and check if all audio is loaded
+                        audioLoadedCount++;
+                        if (audioLoadedCount === audioUrls.length) {
+                            allAudioLoaded = true;
+                            checkAllLoaded();
+                        }
+                    }, undefined, function (error) {
+                        console.error(`Error loading audio for model ${child.name}:`, error);
+                    });
+                }
+            });
+
+            // Once the model is loaded, set the flag and check all resources
+            isGLBLoaded = true;
+            checkAllLoaded();
+        }, undefined, function (error) {
+            console.error('An error happened during the loading of the GLB:', error);
+        });
+
+        // Load non-spatialized audio track
+        const nonSpatialAudioUrl = 'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/AllStar_Game_FOH.mp3';
+        const nonSpatialAudio = new THREE.Audio(listener);
+        const nonSpatialAudioLoader = new THREE.AudioLoader();
+        nonSpatialAudioLoader.load(nonSpatialAudioUrl, (buffer) => {
+            nonSpatialAudio.setBuffer(buffer);
+            nonSpatialAudio.setVolume(1);
+            listener.add(nonSpatialAudio); // Add audio to the listener
+            audioSources.push(nonSpatialAudio); // Add to list of audio sources for management
+        });
+
+        // Add lights to the scene
+        const ambientLight = new THREE.AmbientLight(0xffffff, 1);
+        scene.add(ambientLight);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+        directionalLight.position.set(0, 20, 10);
+        scene.add(directionalLight);
 
         function checkAllLoaded() {
             console.log(`GLB Loaded: ${isGLBLoaded}, Video Loaded: ${isVideoLoaded}, All Audio Loaded: ${allAudioLoaded}`);
@@ -276,38 +280,12 @@
             // Pause and reset the video
             video.pause();
             video.currentTime = 0;
-
-            // Dispose of scene objects
-            scene.traverse((child) => {
-                if (child instanceof THREE.Mesh) {
-                    disposeObject(child);
-                }
-            });
-
-            // Remove all objects from the scene
-            while (scene.children.length > 0) {
-                scene.remove(scene.children[0]);
-            }
-
-            // Reset loaded flags
-            isGLBLoaded = false;
-            isVideoLoaded = false;
-            allAudioLoaded = false;
-            audioLoadedCount = 0;
-
-            // Remove old event listeners
-            renderer.xr.removeEventListener('sessionstart', onSessionStarted);
-            window.removeEventListener('resize', onWindowResize);
-            document.removeEventListener('visibilitychange', handleVisibilityChange);
         }
 
         function startExperience() {
             // Reset the timer
             clearTimeout(experienceTimer);
             experienceTimer = setTimeout(stopExperience, totalDuration * 1000);
-
-            // Reinitialize the scene and objects
-            init();
 
             // Restart animations
             if (mixer) {
@@ -375,18 +353,13 @@
         // Start button click event listeners
         document.getElementById('startButton1').addEventListener('click', startButtonFunctionality);
 
-        function handleVisibilityChange() {
+        document.addEventListener('visibilitychange', function () {
             if (document.hidden) {
                 stopExperience(); // Stop the experience when the tab is not in focus
             }
-        }
-
-        document.addEventListener('visibilitychange', handleVisibilityChange);
+        });
 
         window.addEventListener('resize', onWindowResize, false);
-
-        // Initialize the scene
-        init();
     </script>
 </body>
 </html>
