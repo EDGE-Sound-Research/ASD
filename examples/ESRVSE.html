@@ -434,22 +434,22 @@
 
         raycaster = new THREE.Raycaster();
 
-        // Add static cubes as buttons
-        const buttonCubes = [];
-        const cubeColors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00]; // Define colors for cubes
+// Add static cubes as buttons
+const buttonCubes = [];
+const cubeColors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00]; // Define colors for cubes
 
-        for (let i = 0; i < 4; i++) {
-            const cubeGeometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
-            const cubeMaterial = new THREE.MeshStandardMaterial({ color: cubeColors[i] });
-            const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
-            // Position the cubes above the video screen in a horizontal line
-            const xPos = (i - 1.5) * 0.5; // Adjust the horizontal position
-            const yPos = 0.7; // Slightly above the video screen
-            const zPos = -.4; // Match the depth of the video screen
-            cube.position.set(xPos, yPos, zPos);
-            sceneParent.add(cube);
-            buttonCubes.push(cube);
-        }
+for (let i = 0; i < 4; i++) {
+    const cubeGeometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
+    const cubeMaterial = new THREE.MeshStandardMaterial({ color: cubeColors[i] });
+    const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
+    // Position the cubes above the video screen in a horizontal line
+    const xPos = (i - 1.5) * 0.5; // Adjust the horizontal position
+    const yPos = 0.7; // Slightly above the video screen
+    const zPos = -0.4; // Match the depth of the video screen
+    cube.position.set(xPos, yPos, zPos);
+    sceneParent.add(cube);
+    buttonCubes.push(cube);
+}
 
         const draggableObjects = [draggableCube];
         let selectedObject = null;
@@ -464,53 +464,52 @@
             return raycaster.intersectObjects([...draggableObjects, ...buttonCubes], false);
         }
 
-        function onSelectStart(event) {
-            const controller = event.target;
-            const intersections = getIntersections(controller);
+       function onSelectStart(event) {
+    const controller = event.target;
+    const intersections = getIntersections(controller);
 
-            if (intersections.length > 0) {
-                const intersection = intersections[0];
-                const object = intersection.object;
+    if (intersections.length > 0) {
+        const intersection = intersections[0];
+        const object = intersection.object;
 
-                if (object.userData.isButton) {
-                    object.userData.select();
-                    return; // Do not allow dragging for buttons
-                }
-
-                object.material.emissive.setHex(0xaaaaaa);
-                controller.attach(object);
-                controller.userData.selected = object;
-                selectedObject = object;
-
-                // Store the initial position of the parent scene and the cube
-                initialParentPosition.copy(sceneParent.position);
-                initialCubePosition.copy(draggableCube.position);
-            }
-
-            controller.userData.targetRayMode = event.data.targetRayMode;
+        if (object.userData.isButton) {
+            object.userData.select();
+            return; // Do not allow dragging for buttons
         }
 
-        function onSelectEnd(event) {
-            const controller = event.target;
+        object.material.emissive.setHex(0xaaaaaa);
+        controller.attach(object);
+        controller.userData.selected = object;
+        selectedObject = object;
 
-            if (controller.userData.selected !== undefined) {
-                const object = controller.userData.selected;
-                object.material.emissive.setHex(0x000000);
-                scene.attach(object);
-                controller.userData.selected = undefined;
+        // Store the initial position of the parent scene and the cube
+        initialParentPosition.copy(sceneParent.position);
+        initialCubePosition.copy(draggableCube.position);
+    }
 
-                // Ensure the scene follows the cube exactly
-                if (object === draggableCube) {
-                    const newCubePosition = draggableCube.position.clone();
-                    sceneParent.position.copy(newCubePosition);
-                    initialCubePosition.copy(newCubePosition);
-                    initialParentPosition.copy(sceneParent.position);
-                }
+    controller.userData.targetRayMode = event.data.targetRayMode;
+}
 
-                selectedObject = null;
-            }
+function onSelectEnd(event) {
+    const controller = event.target;
+
+    if (controller.userData.selected !== undefined) {
+        const object = controller.userData.selected;
+        object.material.emissive.setHex(0x000000);
+        scene.attach(object);
+        controller.userData.selected = undefined;
+
+        // Ensure the scene follows the cube exactly
+        if (object === draggableCube) {
+            const newCubePosition = draggableCube.position.clone();
+            sceneParent.position.copy(newCubePosition);
+            initialCubePosition.copy(newCubePosition);
+            initialParentPosition.copy(sceneParent.position);
         }
 
+        selectedObject = null;
+    }
+}
         function intersectObjects(controller) {
             if (controller.userData.targetRayMode === 'screen') return;
             if (controller.userData.selected !== undefined) return;
@@ -546,31 +545,35 @@
             }
         }
 
-        function onButtonCubeHoverStart(cube) {
-            cube.material.emissive.setHex(0xff0000);
-        }
+function onButtonCubeHoverStart(cube) {
+    cube.material.emissive.setHex(0xff0000);
+}
 
-        function onButtonCubeHoverEnd(cube) {
-            cube.material.emissive.setHex(0x000000);
-        }
+function onButtonCubeHoverEnd(cube) {
+    cube.material.emissive.setHex(0x000000);
+}
 
-        function onButtonCubeSelect(cube) {
-            // Call the reset experience functionality
-            stopExperience();
-            startExperience();
-        }
+function onButtonCubeSelect(cube) {
+    const index = buttonCubes.indexOf(cube);
+    if (index === 0) {
+        toggleScale();
+    } else if (index === 1) {
+        stopExperience();
+        startExperience();
+    }
+}
 
-        // Add hover and select interaction to button cubes
-        function addButtonCubeInteractions() {
-            buttonCubes.forEach(cube => {
-                cube.userData.isButton = true;
-                cube.userData.hoverStart = () => onButtonCubeHoverStart(cube);
-                cube.userData.hoverEnd = () => onButtonCubeHoverEnd(cube);
-                cube.userData.select = () => onButtonCubeSelect(cube);
-            });
-        }
+// Add hover and select interaction to button cubes
+function addButtonCubeInteractions() {
+    buttonCubes.forEach(cube => {
+        cube.userData.isButton = true;
+        cube.userData.hoverStart = () => onButtonCubeHoverStart(cube);
+        cube.userData.hoverEnd = () => onButtonCubeHoverEnd(cube);
+        cube.userData.select = () => onButtonCubeSelect(cube);
+    });
+}
 
-        addButtonCubeInteractions();
+addButtonCubeInteractions();
 
         renderer.setAnimationLoop(() => {
             const delta = clock.getDelta();
@@ -587,16 +590,16 @@
             renderer.render(scene, camera);
         });
 
-        let isScaledUp = false;
+let isScaledUp = false;
 
-        function toggleScale() {
-            if (isScaledUp) {
-                sceneParent.scale.set(0.1, 0.1, 0.1);
-            } else {
-                sceneParent.scale.set(1, 1, 1);
-            }
-            isScaledUp = !isScaledUp;
-        }
+function toggleScale() {
+    if (isScaledUp) {
+        sceneParent.scale.set(0.1, 0.1, 0.1);
+    } else {
+        sceneParent.scale.set(1, 1, 1);
+    }
+    isScaledUp = !isScaledUp;
+}
     </script>
 </body>
 </html>
