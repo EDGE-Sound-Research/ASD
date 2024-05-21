@@ -594,9 +594,9 @@ let isScaledUp = false;
 
 function toggleScale() {
     if (isScaledUp) {
-        sceneParent.scale.set(0.1, 0.1, 0.1);
-    } else {
         sceneParent.scale.set(1, 1, 1);
+    } else {
+        sceneParent.scale.set(10, 10, 10);
     }
     isScaledUp = !isScaledUp;
 }
