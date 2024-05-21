@@ -71,9 +71,9 @@
             new THREE.PlaneGeometry(4, 2.25),
             new THREE.MeshStandardMaterial({ map: videoTexture, side: THREE.DoubleSide })
         );
-        videoScreen.position.set(0, .4, -.5);
+        videoScreen.position.set(0, .4, -.4);
         videoScreen.rotation.y = Math.PI;
-        videoScreen.scale.set(-.2, .2, .2);
+        videoScreen.scale.set(-.3, .3, .3);
 
         // Create a parent object that will be draggable
         const sceneParent = new THREE.Group();
@@ -429,12 +429,12 @@
         const cubeColors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00]; // Define colors for cubes
 
         for (let i = 0; i < 4; i++) {
-            const cubeGeometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
+            const cubeGeometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
             const cubeMaterial = new THREE.MeshStandardMaterial({ color: cubeColors[i] });
             const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
             // Position the cubes next to the video screen at the same height
             const xPos = i < 2 ? -0.7 : 0.7;
-            const yPos = 0.9 + (i % 2) * 0.3; // Match the height of the video frame
+            const yPos = 0.4 + (i % 2) * 0.3; // Match the height of the video frame
             const zPos = -1.5;
             cube.position.set(xPos, yPos, zPos);
             sceneParent.add(cube);
