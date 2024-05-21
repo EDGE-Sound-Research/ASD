@@ -34,6 +34,7 @@
         let experienceTimer;
         const totalDuration = 120;
         const intersected = [];
+        const hoveredObjects = new Set();
 
         const video = document.createElement('video');
         video.crossOrigin = "anonymous";
@@ -348,7 +349,8 @@
         scene.add(controllerGrip2);
 
         const lineGeometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -1)]);
-        const line = new THREE.Line(lineGeometry);
+        const lineMaterial = new THREE.LineBasicMaterial({ color: 0xffffff });
+        const line = new THREE.Line(lineGeometry, lineMaterial);
         line.name = 'line';
         line.scale.z = 5;
         controller1.add(line.clone());
@@ -366,18 +368,22 @@
             if (intersections.length > 0) {
                 const intersect = intersections[0];
                 if (intersect.object.name === 'resetButtonMesh') {
-                    intersect.object.material.color.set(0x00ff00); // Change color to green when hovered
+                    intersect.object.material.color.set(0x00ff00);
+                    hoveredObjects.add(intersect.object);
                     if (controller.userData.isSelecting) {
                         stopExperience();
                         startExperience();
                     }
-                } else {
-                    intersect.object.material.color.set(0xff0000); // Reset color when not hovered
                 }
                 controller.getObjectByName('line').scale.z = intersect.distance;
             } else {
                 controller.getObjectByName('line').scale.z = 5;
             }
+        }
+
+        function cleanHovered() {
+            hoveredObjects.forEach(obj => obj.material.color.set(0xff0000));
+            hoveredObjects.clear();
         }
 
         function onSelectStart(event) {
@@ -425,6 +431,7 @@
         }
 
         renderer.setAnimationLoop(() => {
+            cleanHovered();
             handleController(controller1);
             handleController(controller2);
             handlePinch(hand1);
