@@ -40,20 +40,12 @@
         import { XRHandModelFactory } from 'three/addons/webxr/XRHandModelFactory.js';
         import { XRControllerModelFactory } from 'three/addons/webxr/XRControllerModelFactory.js';
 
-        let container;
         let camera, scene, renderer;
         let controller1, controller2;
         let controllerGrip1, controllerGrip2;
         let raycaster;
         const intersected = [];
-        let group;
-
-        let isGLBLoaded = false;
-        let isVideoLoaded = false;
-        let allAudioLoaded = false;
-        let audioLoadedCount = 0;
-        let court;
-        let mixer;
+        let court, mixer;
         const audioSources = [];
         const clock = new THREE.Clock();
         let experienceTimer;
@@ -70,10 +62,10 @@
         videoTexture.magFilter = THREE.LinearFilter;
         videoTexture.format = THREE.RGBAFormat;
 
-        const geometry = new THREE.PlaneGeometry(4, 2.25);
-        const material = new THREE.MeshStandardMaterial({ map: videoTexture, side: THREE.DoubleSide });
-        const videoScreen = new THREE.Mesh(geometry, material);
-
+        const videoScreen = new THREE.Mesh(
+            new THREE.PlaneGeometry(4, 2.25),
+            new THREE.MeshStandardMaterial({ map: videoTexture, side: THREE.DoubleSide })
+        );
         videoScreen.position.set(0, .9, -1.5);
         videoScreen.rotation.y = Math.PI;
         videoScreen.scale.set(-.2, .2, .2);
@@ -362,7 +354,6 @@
         window.addEventListener('resize', onWindowResize, false);
 
         // Hand and controller setup
-
         const controllerModelFactory = new XRControllerModelFactory();
         controller1 = renderer.xr.getController(0);
         controller1.addEventListener('selectstart', onSelectStart);
@@ -382,6 +373,15 @@
         controllerGrip2.add(controllerModelFactory.createControllerModel(controllerGrip2));
         scene.add(controllerGrip2);
 
+        const handModelFactory = new XRHandModelFactory();
+        const hand1 = renderer.xr.getHand(0);
+        hand1.add(handModelFactory.createHandModel(hand1));
+        scene.add(hand1);
+
+        const hand2 = renderer.xr.getHand(1);
+        hand2.add(handModelFactory.createHandModel(hand2));
+        scene.add(hand2);
+
         const geometry2 = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -1)]);
         const line = new THREE.Line(geometry2);
         line.name = 'line';
@@ -392,15 +392,10 @@
 
         raycaster = new THREE.Raycaster();
 
-        // Draggable group
-
-        group = new THREE.Group();
-        scene.add(group);
-
         function getIntersections(controller) {
             controller.updateMatrixWorld();
             raycaster.setFromCamera(controller.position, camera);
-            return raycaster.intersectObjects(group.children, false);
+            return raycaster.intersectObjects(court.children, false);
         }
 
         function onSelectStart(event) {
@@ -424,7 +419,7 @@
             if (controller.userData.selected !== undefined) {
                 const object = controller.userData.selected;
                 object.material.emissive.b = 0;
-                group.attach(object);
+                court.attach(object);
                 controller.userData.selected = undefined;
             }
         }
@@ -466,14 +461,6 @@
             intersectObjects(controller1);
             intersectObjects(controller2);
             renderer.render(scene, camera);
-        });
-
-        // Load the GLTF model as part of the group
-        const gltfLoader = new GLTFLoader();
-        gltfLoader.load('https://raw.githubusercontent.com/zpennachi/three.js/master/examples/nba-as-final.glb', (gltf) => {
-            const model = gltf.scene;
-            model.position.set(0, 0, -1);
-            group.add(model);
         });
     </script>
 </body>
