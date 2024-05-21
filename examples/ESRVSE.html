@@ -107,7 +107,7 @@
         const audioLoader = new THREE.AudioLoader();
 
         const loader = new GLTFLoader();
-        loader.load('https://uploads-ssl.webflow.com/62585c8f3b855d70abac2fff/66464fdbb596dafdc5a82406_rtvse-asd.glb.txt', function (gltf) {
+        loader.load('https://raw.githubusercontent.com/zpennachi/three.js/master/examples/nba-as-final.glb', function (gltf) {
             court = gltf.scene;
             court.scale.set(0.1, 0.1, 0.1);
             court.position.set(0, .7, -1);
