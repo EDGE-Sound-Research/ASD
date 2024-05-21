@@ -91,8 +91,8 @@
             };
             req.send();
         }
-        preloadVideo('https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/NBA_AllStar_Demo_Clip%20(2).mp4');
-
+        preloadVideo(https://dl.dropboxusercontent.com/scl/fi/9upajrftohbrvahzpli5i/NBA_AllStar_Demo_Clip-compress.mp4?rlkey=jceoyzehubnlrku5v0puv0bf6&st=9yhuvs3v&dl=1
+');
         const audioUrls = [
             'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/Ball_Stem.mp3',
             'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/Player1_Stem.mp3',
@@ -377,7 +377,7 @@
 
         Draggable.schema = {
             // draggable states: [detached, hovered, to-be-attached, attached, to-be-detached]
-            state: { type: Types.String, default: 'detached' },
+            state: { type: Types.String, default: 'none' },
             originalParent: { type: Types.Ref, default: null },
             attachedPointer: { type: Types.Ref, default: null }
         };
@@ -391,12 +391,11 @@
 
             execute() {
                 this.handPointers.forEach(hp => {
-                    if (typeof hp.intersectObject !== 'function') return; // Fix the intersectObject is not a function error
                     let distance = null;
                     let intersectingEntity = null;
                     this.queries.intersectable.results.forEach(entity => {
                         const object = entity.getComponent(Object3D).object;
-                        const intersections = raycaster.intersectObject(object, false);
+                        const intersections = hp.intersectObject(object, false);
                         if (intersections && intersections.length > 0) {
                             if (distance == null || intersections[0].distance < distance) {
                                 distance = intersections[0].distance;
@@ -405,27 +404,27 @@
                         }
                     });
                     if (distance) {
-                        if (hp.setCursor) hp.setCursor(distance);  // Check if setCursor method exists
+                        hp.setCursor(distance);
                         if (intersectingEntity.hasComponent(Draggable)) {
                             const draggable = intersectingEntity.getMutableComponent(Draggable);
                             const object = intersectingEntity.getComponent(Object3D).object;
                             object.scale.set(1.1, 1.1, 1.1);
-                            if (hp.isPinched && hp.isPinched()) {  // Check if isPinched method exists
-                                if (!hp.isAttached && !hp.isAttached() && draggable.state != 'attached') {  // Check if isAttached method exists
+                            if (hp.isPinched()) {
+                                if (!hp.isAttached() && draggable.state != 'attached') {
                                     draggable.state = 'to-be-attached';
                                     draggable.attachedPointer = hp;
-                                    if (hp.setAttached) hp.setAttached(true);  // Check if setAttached method exists
+                                    hp.setAttached(true);
                                 }
                             } else {
-                                if (hp.isAttached && hp.isAttached() && draggable.state == 'attached') {  // Check if isAttached method exists
+                                if (hp.isAttached() && draggable.state == 'attached') {
                                     draggable.state = 'to-be-detached';
                                     draggable.attachedPointer = null;
-                                    if (hp.setAttached) hp.setAttached(false);  // Check if setAttached method exists
+                                    hp.setAttached(false);
                                 }
                             }
                         }
                     } else {
-                        if (hp.setCursor) hp.setCursor(1.5);  // Check if setCursor method exists
+                        hp.setCursor(1.5);
                     }
                 });
             }
@@ -437,47 +436,11 @@
             }
         };
 
-        class DraggableSystem extends System {
-            execute() {
-                this.queries.draggable.results.forEach(entity => {
-                    const draggable = entity.getMutableComponent(Draggable);
-                    const object = entity.getComponent(Object3D).object;
-                    if (draggable.originalParent == null && object.parent != null) {
-                        draggable.originalParent = object.parent;
-                    }
-
-                    switch (draggable.state) {
-                        case 'to-be-attached':
-                            if (draggable.attachedPointer && draggable.attachedPointer.attach) {
-                                draggable.attachedPointer.attach(object);
-                                draggable.state = 'attached';
-                            }
-                            break;
-                        case 'to-be-detached':
-                            if (draggable.originalParent && draggable.originalParent.attach) {
-                                draggable.originalParent.attach(object);
-                                draggable.state = 'detached';
-                            }
-                            break;
-                        default:
-                            object.scale.set(1, 1, 1);
-                    }
-                });
-            }
-        }
-
-        DraggableSystem.queries = {
-            draggable: {
-                components: [Draggable]
-            }
-        };
-
         const world = new World();
         world.registerComponent(Object3D)
             .registerComponent(Draggable)
             .registerComponent(Intersectable)
-            .registerSystem(HandRaySystem, { handPointers: [controller1, controller2] })
-            .registerSystem(DraggableSystem);
+            .registerSystem(HandRaySystem, { handPointers: [controller1, controller2] });
 
         const handModelFactory = new XRHandModelFactory();
         const hand1 = renderer.xr.getHand(0);
@@ -488,7 +451,7 @@
         hand2.add(handModelFactory.createHandModel(hand2));
         scene.add(hand2);
 
-        const draggableObjects = [court, resetButtonMesh]; // Added resetButtonMesh to draggable objects
+        const draggableObjects = [court]; // Add other objects if needed
 
         draggableObjects.forEach(object => {
             const entity = world.createEntity();
