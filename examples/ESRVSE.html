@@ -408,7 +408,7 @@
         const draggableCubeGeometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
         const draggableCubeMaterial = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
         const draggableCube = new THREE.Mesh(draggableCubeGeometry, draggableCubeMaterial);
-        draggableCube.position.set(0, .7, -1);
+        draggableCube.position.set(0, 0, 0);
         scene.add(draggableCube);
 
         // Add static cubes as buttons
@@ -428,6 +428,8 @@
         }
 
         const draggableObjects = [draggableCube];
+        let selectedObject = null;
+        let initialParentPosition = new THREE.Vector3();
 
         function getIntersections(controller) {
             const tempMatrix = new THREE.Matrix4();
@@ -447,6 +449,10 @@
                 object.material.emissive.setHex(0xaaaaaa);
                 controller.attach(object);
                 controller.userData.selected = object;
+                selectedObject = object;
+
+                // Store the initial position of the parent scene
+                initialParentPosition.copy(sceneParent.position);
             }
 
             controller.userData.targetRayMode = event.data.targetRayMode;
@@ -460,11 +466,7 @@
                 object.material.emissive.setHex(0x000000);
                 scene.attach(object);
                 controller.userData.selected = undefined;
-
-                // Move the entire scene parent when the draggable cube is moved
-                if (object === draggableCube) {
-                    sceneParent.position.copy(draggableCube.position);
-                }
+                selectedObject = null;
             }
         }
 
@@ -540,6 +542,12 @@
             cleanIntersected();
             intersectObjects(controller1);
             intersectObjects(controller2);
+
+            // Update the scene position continuously if an object is selected
+            if (selectedObject) {
+                sceneParent.position.copy(draggableCube.position);
+            }
+
             renderer.render(scene, camera);
         });
     </script>
