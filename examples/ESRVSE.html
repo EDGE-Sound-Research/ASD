@@ -20,7 +20,7 @@
             font-size: 16px;
             cursor: pointer;
         }
-        #startButton1 {
+        #scaleButton {
             top: 10px;
             left: 10px;
         }
@@ -28,11 +28,21 @@
             top: 50px;
             left: 10px;
         }
+        #button3 {
+            top: 90px;
+            left: 10px;
+        }
+        #button4 {
+            top: 130px;
+            left: 10px;
+        }
     </style>
 </head>
 <body>
-    <button id="startButton1" disabled>Start Experience</button>
+    <button id="scaleButton">Toggle Scale</button>
     <button id="resetButton">Reset Experience</button>
+    <button id="button3" disabled>Button 3</button>
+    <button id="button4" disabled>Button 4</button>
     <script type="module">
         import * as THREE from 'three';
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -215,12 +225,12 @@
         function checkAllLoaded() {
             console.log(`GLB Loaded: ${isGLBLoaded}, Video Loaded: ${isVideoLoaded}, All Audio Loaded: ${allAudioLoaded}`);
             if (isGLBLoaded && isVideoLoaded && allAudioLoaded) {
-                const startButton1 = document.getElementById('startButton1');
-                if (startButton1) {
-                    startButton1.disabled = false;
-                    console.log("Start Button 1 enabled.");
+                const scaleButton = document.getElementById('scaleButton');
+                if (scaleButton) {
+                    scaleButton.disabled = false;
+                    console.log("Scale Button enabled.");
                 } else {
-                    console.log("Start Button 1 not found!");
+                    console.log("Scale Button not found!");
                 }
                 console.log("All assets loaded. Ready to start!");
             }
@@ -336,8 +346,8 @@
             animate();
         }
 
-        document.getElementById('startButton1').addEventListener('click', () => {
-            startExperience();
+        document.getElementById('scaleButton').addEventListener('click', () => {
+            toggleScale();
         });
 
         document.getElementById('resetButton').addEventListener('click', () => {
@@ -375,7 +385,7 @@
             startExperience();
         }
 
-        document.getElementById('startButton1').addEventListener('click', startButtonFunctionality);
+        document.getElementById('scaleButton').addEventListener('click', startButtonFunctionality);
 
         document.addEventListener('visibilitychange', function () {
             if (document.hidden) {
@@ -424,22 +434,22 @@
 
         raycaster = new THREE.Raycaster();
 
-// Add static cubes as buttons
-const buttonCubes = [];
-const cubeColors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00]; // Define colors for cubes
+        // Add static cubes as buttons
+        const buttonCubes = [];
+        const cubeColors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00]; // Define colors for cubes
 
-for (let i = 0; i < 4; i++) {
-    const cubeGeometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
-    const cubeMaterial = new THREE.MeshStandardMaterial({ color: cubeColors[i] });
-    const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
-    // Position the cubes above the video screen in a horizontal line
-    const xPos = (i - 1.5) * 0.5; // Adjust the horizontal position
-    const yPos = 0.7; // Slightly above the video screen
-    const zPos = -.4; // Match the depth of the video screen
-    cube.position.set(xPos, yPos, zPos);
-    sceneParent.add(cube);
-    buttonCubes.push(cube);
-}
+        for (let i = 0; i < 4; i++) {
+            const cubeGeometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
+            const cubeMaterial = new THREE.MeshStandardMaterial({ color: cubeColors[i] });
+            const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
+            // Position the cubes above the video screen in a horizontal line
+            const xPos = (i - 1.5) * 0.5; // Adjust the horizontal position
+            const yPos = 0.7; // Slightly above the video screen
+            const zPos = -.4; // Match the depth of the video screen
+            cube.position.set(xPos, yPos, zPos);
+            sceneParent.add(cube);
+            buttonCubes.push(cube);
+        }
 
         const draggableObjects = [draggableCube];
         let selectedObject = null;
@@ -576,6 +586,17 @@ for (let i = 0; i < 4; i++) {
 
             renderer.render(scene, camera);
         });
+
+        let isScaledUp = false;
+
+        function toggleScale() {
+            if (isScaledUp) {
+                sceneParent.scale.set(0.1, 0.1, 0.1);
+            } else {
+                sceneParent.scale.set(1, 1, 1);
+            }
+            isScaledUp = !isScaledUp;
+        }
     </script>
 </body>
 </html>
