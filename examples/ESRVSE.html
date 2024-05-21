@@ -51,6 +51,11 @@
         let experienceTimer;
         const totalDuration = 120;
 
+        let isGLBLoaded = false;
+        let isVideoLoaded = false;
+        let allAudioLoaded = false;
+        let audioLoadedCount = 0;
+
         const video = document.createElement('video');
         video.crossOrigin = "anonymous";
         video.preload = 'auto';
@@ -207,7 +212,7 @@
         if (video.readyState >= 4) {
             isVideoLoaded = true;
             checkAllLoaded();
-        }
+        });
 
         function disposeObject(obj) {
             if (obj.geometry) obj.geometry.dispose();
@@ -399,7 +404,7 @@
             const cubeGeometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
             const cubeMaterial = new THREE.MeshStandardMaterial({ color: cubeColors[i] });
             const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
-            cube.position.set(0, 1.5, -2 + i * 0.5);
+            cube.position.set(i * 0.5 - 1, 1.5, -2);
             scene.add(cube);
             cubes.push(cube);
         }
@@ -407,7 +412,7 @@
         function getIntersections(controller) {
             controller.updateMatrixWorld();
             raycaster.setFromCamera(controller.position, camera);
-            return raycaster.intersectObjects([...cubes, court], false);
+            return raycaster.intersectObjects(cubes, false);
         }
 
         function onSelectStart(event) {
