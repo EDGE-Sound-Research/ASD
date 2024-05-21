@@ -417,9 +417,10 @@
         }
 
         function getIntersections(controller) {
-            controller.updateMatrixWorld();
+            const tempMatrix = new THREE.Matrix4();
+            tempMatrix.identity().extractRotation(controller.matrixWorld);
             raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
-            raycaster.ray.direction.set(0, 0, -1).applyMatrix4(controller.matrixWorld);
+            raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
             return raycaster.intersectObjects(cubes, false);
         }
 
