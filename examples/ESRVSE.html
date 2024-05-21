@@ -173,6 +173,9 @@
                 }
             });
 
+            // Center the draggable cube in the court
+            draggableCube.position.copy(court.position);
+
             isGLBLoaded = true;
             checkAllLoaded();
         }, undefined, function (error) {
@@ -408,7 +411,6 @@
         const draggableCubeGeometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
         const draggableCubeMaterial = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
         const draggableCube = new THREE.Mesh(draggableCubeGeometry, draggableCubeMaterial);
-        draggableCube.position.set(0, 0, 0);
         scene.add(draggableCube);
 
         // Add static cubes as buttons
