@@ -243,45 +243,44 @@
         }
 
         function stopExperience() {
-            if (mixer) {
-                mixer.stopAllAction();
-                mixer._actions.forEach(action => {
-                    action.stop();
-                    action.reset();
-                });
-            }
-            audioSources.forEach(audio => {
-                if (audio.isPlaying) {
-                    audio.stop();
-                }
-            });
-            video.pause();
-            video.currentTime = 0;
+    if (mixer) {
+        mixer.stopAllAction();
+        mixer._actions.forEach(action => {
+            action.stop();
+            action.reset();
+        });
+    }
+    audioSources.forEach(audio => {
+        if (audio.isPlaying) {
+            audio.stop();
         }
+    });
+    video.pause();
+    video.currentTime = 0;
+}
 
-        function startExperience() {
-            clearTimeout(experienceTimer);
-            experienceTimer = setTimeout(stopExperience, totalDuration * 1000);
+function startExperience() {
+    clearTimeout(experienceTimer);
+    experienceTimer = setTimeout(stopExperience, totalDuration * 1000);
 
-            if (mixer) {
-                mixer.stopAllAction();
-                mixer.update(0);
-                mixer._actions.forEach(action => {
-                    action.reset();
-                    action.play();
-                });
-            }
+    if (mixer) {
+        mixer.stopAllAction();
+        mixer.update(0);
+        mixer._actions.forEach(action => {
+            action.reset();
+            action.play();
+        });
+    }
 
-            audioSources.forEach(audio => {
-                if (!audio.isPlaying) {
-                    audio.play();
-                }
-            });
-
-            video.play();
-            animate();
+    audioSources.forEach(audio => {
+        if (!audio.isPlaying) {
+            audio.play();
         }
+    });
 
+    video.play();
+    animate();
+}
         document.getElementById('startButton1').addEventListener('click', () => {
             startExperience();
         });
@@ -444,14 +443,21 @@
             }
         }
 
-        renderer.setAnimationLoop(() => {
-            cleanHovered();
-            handleController(controller1);
-            handleController(controller2);
-            handlePinch(hand1);
-            handlePinch(hand2);
-            renderer.render(scene, camera);
-        });
+    renderer.setAnimationLoop(() => {
+    cleanHovered();
+    handleController(controller1);
+    handleController(controller2);
+    handlePinch(hand1);
+    handlePinch(hand2);
+    const delta = clock.getDelta();
+    if (mixer) {
+        mixer.update(delta);
+    }
+    if (video.readyState >= video.HAVE_CURRENT_DATA) {
+        videoTexture.needsUpdate = true;
+    }
+    renderer.render(scene, camera);
+});
     </script>
 </body>
 </html>
