@@ -205,14 +205,14 @@
             }
         }
 
-        video.addEventListener('canplaythrough', () => {
-            isVideoLoaded = true;
-            checkAllLoaded();
-        });
-        if (video.readyState >= 4) {
-            isVideoLoaded = true;
-            checkAllLoaded();
-        });
+video.addEventListener('canplaythrough', () => {
+    isVideoLoaded = true;
+    checkAllLoaded();
+});
+if (video.readyState >= 4) {
+    isVideoLoaded = true;
+    checkAllLoaded();
+}
 
         function disposeObject(obj) {
             if (obj.geometry) obj.geometry.dispose();
