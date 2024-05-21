@@ -20,7 +20,6 @@
         import * as THREE from 'three';
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
         import { XRButton } from 'three/addons/webxr/XRButton.js';
-        import { XRHandModelFactory } from 'three/addons/webxr/XRHandModelFactory.js';
 
         let isGLBLoaded = false;
         let isVideoLoaded = false;
@@ -74,20 +73,23 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
             document.body.appendChild(renderer.domElement);
 
-            listener = new THREE.AudioListener();
-            camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 1000);
-            renderer.xr.setReferenceSpaceType('local-floor'); // or 'local-floor' based on your needs
+            // Ensure XR is supported
+            if (!('xr' in navigator)) {
+                console.error('WebXR is not supported by your browser');
+                return;
+            }
+
             renderer.xr.enabled = true;
             document.body.appendChild(XRButton.createButton(renderer, { requiredFeatures: ['hit-test'] }));
             scene.background = null;
 
-            // Set initial camera position and rotation to match the "center" position
-            const initialCameraPosition = new THREE.Vector3(0, 2, 6); // Center position
-            const initialCameraRotation = new THREE.Euler(0, THREE.MathUtils.degToRad(0), 0); // Center rotation
-            camera.position.copy(initialCameraPosition);
-            camera.rotation.copy(initialCameraRotation);
-            camera.updateProjectionMatrix(); // Update projection matrix if needed
-            camera.add(listener); // Attach audio listener to the camera
+            listener = new THREE.AudioListener();
+            camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 2, 6);
+            camera.rotation.set(0, THREE.MathUtils.degToRad(0), 0);
+            camera.add(listener);
+
+            renderer.xr.setReferenceSpaceType('local-floor'); // or 'local-floor' based on your needs
 
             // Load non-spatialized audio track
             const nonSpatialAudioUrl = 'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/AllStar_Game_FOH.mp3';
