@@ -119,6 +119,16 @@
             });
 
             court.traverse((child) => {
+                if (child.isMesh && child.material) {
+                    if (child.name === 'courtPlane') {
+                        // Keep the original material for the court plane
+                        child.material = new THREE.MeshStandardMaterial({ map: videoTexture });
+                    } else {
+                        // Set standard material for other models
+                        child.material = new THREE.MeshStandardMaterial({ color: 0x808080 });
+                    }
+                }
+
                 const index = modelIDs.indexOf(child.name);
                 if (index !== -1) {
                     audioLoader.load(audioUrls[index], (buffer) => {
@@ -158,7 +168,7 @@
 
         const ambientLight = new THREE.AmbientLight(0xffffff, 1);
         scene.add(ambientLight);
-        const directionalLight = a new THREE.DirectionalLight(0xffffff, 1);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
         directionalLight.position.set(0, 20, 10);
         scene.add(directionalLight);
 
