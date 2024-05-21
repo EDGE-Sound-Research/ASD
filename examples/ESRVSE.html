@@ -460,6 +460,11 @@
                 object.material.emissive.setHex(0x000000);
                 scene.attach(object);
                 controller.userData.selected = undefined;
+
+                // Move the entire scene parent when the draggable cube is moved
+                if (object === draggableCube) {
+                    sceneParent.position.copy(draggableCube.position);
+                }
             }
         }
 
@@ -476,6 +481,11 @@
                 object.material.emissive.setHex(0xff0000);
                 intersected.push(object);
                 line.scale.z = intersection.distance;
+
+                // Hover interactions for button cubes
+                if (object.userData.isButton) {
+                    object.userData.hoverStart();
+                }
             } else {
                 line.scale.z = 5;
             }
@@ -485,6 +495,11 @@
             while (intersected.length) {
                 const object = intersected.pop();
                 object.material.emissive.setHex(0x000000);
+
+                // Hover end interactions for button cubes
+                if (object.userData.isButton) {
+                    object.userData.hoverEnd();
+                }
             }
         }
 
