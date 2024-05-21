@@ -422,9 +422,9 @@
             const cubeGeometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
             const cubeMaterial = new THREE.MeshStandardMaterial({ color: cubeColors[i] });
             const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
-            // Position the cubes next to the video screen
+            // Position the cubes next to the video screen at the same height
             const xPos = i < 2 ? -0.7 : 0.7;
-            const yPos = 0.2 + (i % 2) * 0.3; // Stack cubes vertically
+            const yPos = 0.9 + (i % 2) * 0.3; // Match the height of the video frame
             const zPos = -1.5;
             cube.position.set(xPos, yPos, zPos);
             sceneParent.add(cube);
@@ -479,10 +479,13 @@
                 scene.attach(object);
                 controller.userData.selected = undefined;
 
-                // Update the scene position when dragging ends
+                // Ensure the scene follows the cube exactly
                 if (object === draggableCube) {
-                    const cubeDelta = new THREE.Vector3().subVectors(draggableCube.position, initialCubePosition);
-                    sceneParent.position.copy(initialParentPosition.clone().add(cubeDelta));
+                    const newCubePosition = draggableCube.position.clone();
+                    const delta = new THREE.Vector3().subVectors(newCubePosition, initialCubePosition);
+                    sceneParent.position.copy(initialParentPosition.clone().add(delta));
+                    initialCubePosition.copy(newCubePosition);
+                    initialParentPosition.copy(sceneParent.position);
                 }
 
                 selectedObject = null;
