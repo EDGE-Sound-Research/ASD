@@ -22,6 +22,7 @@
         import { XRButton } from 'three/addons/webxr/XRButton.js';
         import { XRHandModelFactory } from 'three/addons/webxr/XRHandModelFactory.js';
         import { XRControllerModelFactory } from 'three/addons/webxr/XRControllerModelFactory.js';
+        import { World, System, Component, TagComponent, Types } from 'three/addons/libs/ecsy.module.js';
 
         let isGLBLoaded = false;
         let isVideoLoaded = false;
@@ -63,7 +64,7 @@
         const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 1000);
         renderer.xr.setReferenceSpaceType('local-floor');
         renderer.xr.enabled = true;
-        document.body.appendChild(XRButton.createButton(renderer, { requiredFeatures: ['hit-test'] }));
+        document.body.appendChild(XRButton.createButton(renderer, { requiredFeatures: ['hit-test', 'hand-tracking'] }));
         scene.background = null;
 
         const initialCameraPosition = new THREE.Vector3(0, 2, 6);
@@ -366,81 +367,104 @@
         controller1.add(line.clone());
         controller2.add(line.clone());
 
-        function handleController(controller) {
-            const tempMatrix = new THREE.Matrix4();
-            tempMatrix.identity().extractRotation(controller.matrixWorld);
+        class Object3D extends Component { }
 
-            raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
-            raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
+        Object3D.schema = {
+            object: { type: Types.Ref }
+        };
 
-            const intersections = raycaster.intersectObjects(scene.children, false);
+        class Draggable extends Component { }
 
-            if (intersections.length > 0) {
-                const intersect = intersections[0];
-                if (intersect.object.name === 'resetButtonMesh') {
-                    intersect.object.material.color.set(0x00ff00);
-                    if (controller.userData.isSelecting) {
-                        stopExperience();
-                        startExperience();
-                        intersect.object.material.color.set(0xff0000); // Reset color after selection
+        Draggable.schema = {
+            // draggable states: [detached, hovered, to-be-attached, attached, to-be-detached]
+            state: { type: Types.String, default: 'none' },
+            originalParent: { type: Types.Ref, default: null },
+            attachedPointer: { type: Types.Ref, default: null }
+        };
+
+        class Intersectable extends TagComponent { }
+
+        class HandRaySystem extends System {
+            init(attributes) {
+                this.handPointers = attributes.handPointers;
+            }
+
+            execute() {
+                this.handPointers.forEach(hp => {
+                    let distance = null;
+                    let intersectingEntity = null;
+                    this.queries.intersectable.results.forEach(entity => {
+                        const object = entity.getComponent(Object3D).object;
+                        const intersections = hp.intersectObject(object, false);
+                        if (intersections && intersections.length > 0) {
+                            if (distance == null || intersections[0].distance < distance) {
+                                distance = intersections[0].distance;
+                                intersectingEntity = entity;
+                            }
+                        }
+                    });
+                    if (distance) {
+                        hp.setCursor(distance);
+                        if (intersectingEntity.hasComponent(Draggable)) {
+                            const draggable = intersectingEntity.getMutableComponent(Draggable);
+                            const object = intersectingEntity.getComponent(Object3D).object;
+                            object.scale.set(1.1, 1.1, 1.1);
+                            if (hp.isPinched()) {
+                                if (!hp.isAttached() && draggable.state != 'attached') {
+                                    draggable.state = 'to-be-attached';
+                                    draggable.attachedPointer = hp;
+                                    hp.setAttached(true);
+                                }
+                            } else {
+                                if (hp.isAttached() && draggable.state == 'attached') {
+                                    draggable.state = 'to-be-detached';
+                                    draggable.attachedPointer = null;
+                                    hp.setAttached(false);
+                                }
+                            }
+                        }
+                    } else {
+                        hp.setCursor(1.5);
                     }
-                }
-                controller.getObjectByName('line').scale.z = intersect.distance;
-            } else {
-                controller.getObjectByName('line').scale.z = 5;
+                });
             }
         }
 
-        function onSelectStart(event) {
-            const controller = event.target;
-            controller.userData.isSelecting = true;
-        }
+        HandRaySystem.queries = {
+            intersectable: {
+                components: [Intersectable]
+            }
+        };
 
-        function onSelectEnd(event) {
-            const controller = event.target;
-            controller.userData.isSelecting = false;
-        }
-
-        controller1.addEventListener('selectstart', onSelectStart);
-        controller1.addEventListener('selectend', onSelectEnd);
-        controller2.addEventListener('selectstart', onSelectStart);
-        controller2.addEventListener('selectend', onSelectEnd);
+        const world = new World();
+        world.registerComponent(Object3D)
+            .registerComponent(Draggable)
+            .registerComponent(Intersectable)
+            .registerSystem(HandRaySystem, { handPointers: [controller1, controller2] });
 
         const handModelFactory = new XRHandModelFactory();
         const hand1 = renderer.xr.getHand(0);
-        const hand2 = renderer.xr.getHand(1);
         hand1.add(handModelFactory.createHandModel(hand1));
-        hand2.add(handModelFactory.createHandModel(hand2));
         scene.add(hand1);
+
+        const hand2 = renderer.xr.getHand(1);
+        hand2.add(handModelFactory.createHandModel(hand2));
         scene.add(hand2);
 
-        function handlePinch(hand) {
-            const indexTip = hand.joints['index-finger-tip'];
-            const thumbTip = hand.joints['thumb-tip'];
+        const draggableObjects = [court]; // Add other objects if needed
 
-            if (indexTip && thumbTip) {
-                const distance = indexTip.position.distanceTo(thumbTip.position);
-                if (distance < 0.02) {
-                    raycaster.setFromCamera({ x: 0, y: 0 }, camera);
-                    const intersects = raycaster.intersectObjects(scene.children);
-
-                    if (intersects.length > 0) {
-                        const intersect = intersects[0];
-                        if (intersect.object.name === 'resetButtonMesh') {
-                            stopExperience();
-                            startExperience();
-                        }
-                    }
-                }
-            }
-        }
+        draggableObjects.forEach(object => {
+            const entity = world.createEntity();
+            entity.addComponent(Object3D, { object });
+            entity.addComponent(Draggable);
+            entity.addComponent(Intersectable);
+        });
 
         renderer.setAnimationLoop(() => {
-            handleController(controller1);
-            handleController(controller2);
-            handlePinch(hand1);
-            handlePinch(hand2);
             const delta = clock.getDelta();
+            const elapsedTime = clock.elapsedTime;
+            renderer.xr.updateCamera(camera);
+            world.execute(delta, elapsedTime);
             if (mixer) {
                 mixer.update(delta);
             }
