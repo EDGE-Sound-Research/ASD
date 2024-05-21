@@ -75,7 +75,12 @@
         videoScreen.rotation.y = Math.PI;
         videoScreen.scale.set(-.2, .2, .2);
 
+        // Create a parent object that will be draggable
+        const sceneParent = new THREE.Group();
         scene = new THREE.Scene();
+        scene.add(sceneParent);
+        sceneParent.add(videoScreen);
+
         renderer = new THREE.WebGLRenderer({ alpha: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
@@ -132,7 +137,7 @@
             court = gltf.scene;
             court.scale.set(0.1, 0.1, 0.1);
             court.position.set(0, .7, -1);
-            scene.add(court);
+            sceneParent.add(court);
 
             mixer = new THREE.AnimationMixer(court);
             gltf.animations.forEach((clip) => {
@@ -167,17 +172,6 @@
                     }
                 }
             });
-
-            // Add the draggable cube here
-            const draggableCubeGeometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
-            const draggableCubeMaterial = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
-            const draggableCube = new THREE.Mesh(draggableCubeGeometry, draggableCubeMaterial);
-            draggableCube.position.set(0, 1.5, -1);
-            scene.add(draggableCube);
-            court.add(draggableCube);
-
-            // Ensure the draggable cube is in the list of draggable objects
-            draggableObjects.push(draggableCube);
 
             isGLBLoaded = true;
             checkAllLoaded();
@@ -268,7 +262,7 @@
                 const offset = new THREE.Vector3(0, 1, -2);
                 offset.applyQuaternion(viewerRotation);
                 const spawnPoint = viewerPosition.clone().add(offset);
-                court.position.copy(spawnPoint);
+                sceneParent.position.copy(spawnPoint);
             }
             renderer.render(scene, camera);
             frame.session.requestAnimationFrame(onAnimationFrame);
@@ -410,9 +404,15 @@
 
         raycaster = new THREE.Raycaster();
 
-        // Add test cubes
+        // Add draggable cube
+        const draggableCubeGeometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
+        const draggableCubeMaterial = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
+        const draggableCube = new THREE.Mesh(draggableCubeGeometry, draggableCubeMaterial);
+        draggableCube.position.set(0, 1.5, -1);
+        scene.add(draggableCube);
+
+        // Add static cubes as buttons
         const cubeColors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00];
-        const cubes = [];
         for (let i = 0; i < 4; i++) {
             const cubeGeometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
             const cubeMaterial = new THREE.MeshStandardMaterial({ color: cubeColors[i] });
@@ -422,11 +422,10 @@
             const yPos = 1.5 + (i % 2) * 0.3; // Stack cubes vertically
             const zPos = -2;
             cube.position.set(xPos, yPos, zPos);
-            scene.add(cube);
-            cubes.push(cube);
+            sceneParent.add(cube);
         }
 
-        const draggableObjects = [...cubes];
+        const draggableObjects = [draggableCube];
 
         function getIntersections(controller) {
             const tempMatrix = new THREE.Matrix4();
