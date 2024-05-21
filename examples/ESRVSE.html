@@ -79,6 +79,19 @@
         const sceneParent = new THREE.Group();
         scene = new THREE.Scene();
         scene.add(sceneParent);
+
+        // Initial position of the draggable cube
+        const initialCubePosition = new THREE.Vector3(0, 1, -2);
+
+        // Apply the initial position to the draggable cube
+        const draggableCubeGeometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
+        const draggableCubeMaterial = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
+        const draggableCube = new THREE.Mesh(draggableCubeGeometry, draggableCubeMaterial);
+        draggableCube.position.copy(initialCubePosition); // Set the initial position
+        scene.add(draggableCube);
+        sceneParent.position.copy(initialCubePosition); // Set the sceneParent's initial position
+
+        // Add the video screen to the sceneParent
         sceneParent.add(videoScreen);
 
         renderer = new THREE.WebGLRenderer({ alpha: true });
@@ -174,7 +187,8 @@
             });
 
             // Center the draggable cube in the court
-            draggableCube.position.copy(court.position);
+            draggableCube.position.copy(initialCubePosition); // Use the initial position
+            sceneParent.position.copy(initialCubePosition); // Ensure sceneParent starts at the same position
 
             isGLBLoaded = true;
             checkAllLoaded();
@@ -256,21 +270,23 @@
             });
         }
 
-function onAnimationFrame(time, frame) {
-    const referenceSpace = renderer.xr.getReferenceSpace();
-    const viewerPose = frame.getViewerPose(referenceSpace);
-    if (viewerPose) {
-        const viewerPosition = new THREE.Vector3().fromArray(viewerPose.transform.position);
-        const viewerRotation = new THREE.Quaternion().fromArray(viewerPose.transform.orientation);
-        const offset = new THREE.Vector3(0, 1, -2);
-        offset.applyQuaternion(viewerRotation);
-        const spawnPoint = viewerPosition.clone().add(offset);
-        draggableCube.position.copy(spawnPoint); // Apply offset to the draggable cube
-        sceneParent.position.copy(viewerPosition); // Ensure sceneParent is at viewer position
-    }
-    renderer.render(scene, camera);
-    frame.session.requestAnimationFrame(onAnimationFrame);
-}
+        function onAnimationFrame(time, frame) {
+            const referenceSpace = renderer.xr.getReferenceSpace();
+            const viewerPose = frame.getViewerPose(referenceSpace);
+            if (viewerPose) {
+                const viewerPosition = new THREE.Vector3().fromArray(viewerPose.transform.position);
+                const viewerRotation = new THREE.Quaternion().fromArray(viewerPose.transform.orientation);
+                const offset = new THREE.Vector3(0, 1, -2);
+                offset.applyQuaternion(viewerRotation);
+                const spawnPoint = viewerPosition.clone().add(offset);
+                if (!draggableCube.position.equals(spawnPoint)) {
+                    draggableCube.position.copy(spawnPoint); // Apply offset to the draggable cube
+                    sceneParent.position.copy(spawnPoint); // Ensure sceneParent is at the cube's position
+                }
+            }
+            renderer.render(scene, camera);
+            frame.session.requestAnimationFrame(onAnimationFrame);
+        }
 
         renderer.xr.addEventListener('sessionstart', onSessionStarted);
 
@@ -408,13 +424,6 @@ function onAnimationFrame(time, frame) {
 
         raycaster = new THREE.Raycaster();
 
-        // Add draggable cube
-        const draggableCubeGeometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
-        const draggableCubeMaterial = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
-        const draggableCube = new THREE.Mesh(draggableCubeGeometry, draggableCubeMaterial);
-        draggableCube.position.set(0, 0, 0); // Ensure it's centered initially
-        scene.add(draggableCube);
-
         // Add static cubes as buttons
         const buttonCubes = [];
         const cubeColors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00]; // Define colors for cubes
@@ -435,7 +444,7 @@ function onAnimationFrame(time, frame) {
         const draggableObjects = [draggableCube];
         let selectedObject = null;
         let initialParentPosition = new THREE.Vector3();
-        let initialCubePosition = new THREE.Vector3();
+        initialCubePosition.copy(draggableCube.position); // Ensure initialCubePosition is set
 
         function getIntersections(controller) {
             const tempMatrix = new THREE.Matrix4();
@@ -471,27 +480,26 @@ function onAnimationFrame(time, frame) {
             controller.userData.targetRayMode = event.data.targetRayMode;
         }
 
-function onSelectEnd(event) {
-    const controller = event.target;
+        function onSelectEnd(event) {
+            const controller = event.target;
 
-    if (controller.userData.selected !== undefined) {
-        const object = controller.userData.selected;
-        object.material.emissive.setHex(0x000000);
-        scene.attach(object);
-        controller.userData.selected = undefined;
+            if (controller.userData.selected !== undefined) {
+                const object = controller.userData.selected;
+                object.material.emissive.setHex(0x000000);
+                scene.attach(object);
+                controller.userData.selected = undefined;
 
-        // Ensure the scene follows the cube exactly
-        if (object === draggableCube) {
-            const newCubePosition = draggableCube.position.clone();
-            sceneParent.position.copy(newCubePosition);
-            initialCubePosition.copy(newCubePosition);
-            initialParentPosition.copy(sceneParent.position);
+                // Ensure the scene follows the cube exactly
+                if (object === draggableCube) {
+                    const newCubePosition = draggableCube.position.clone();
+                    sceneParent.position.copy(newCubePosition);
+                    initialCubePosition.copy(newCubePosition);
+                    initialParentPosition.copy(sceneParent.position);
+                }
+
+                selectedObject = null;
+            }
         }
-
-        selectedObject = null;
-    }
-}
-
 
         function intersectObjects(controller) {
             if (controller.userData.targetRayMode === 'screen') return;
