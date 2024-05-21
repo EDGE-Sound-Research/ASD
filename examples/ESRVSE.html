@@ -81,7 +81,7 @@
         scene.add(sceneParent);
 
         // Initial position of the draggable cube
-        const initialCubePosition = new THREE.Vector3(0, 1, -2);
+        const initialCubePosition = new THREE.Vector3(0, 0, 0);
 
         // Apply the initial position to the draggable cube
         const draggableCubeGeometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
@@ -149,7 +149,7 @@
         loader.load('https://raw.githubusercontent.com/zpennachi/three.js/master/examples/nba-as-final.glb', function (gltf) {
             court = gltf.scene;
             court.scale.set(0.1, 0.1, 0.1);
-            court.position.set(0, .7, -1);
+            court.position.set(0, 0, 0);
             sceneParent.add(court);
 
             mixer = new THREE.AnimationMixer(court);
