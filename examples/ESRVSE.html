@@ -35,7 +35,6 @@
         const totalDuration = 120;
         const intersected = [];
         const hoveredObjects = new Set();
-        let experienceStarted = false;
 
         const video = document.createElement('video');
         video.crossOrigin = "anonymous";
@@ -283,14 +282,13 @@
             animate();
         }
 
+        document.getElementById('startButton1').addEventListener('click', () => {
+            startExperience();
+        });
+
         document.getElementById('resetButton').addEventListener('click', () => {
-            if (experienceStarted) {
-                stopExperience();
-                startExperience();
-            } else {
-                startExperience();
-                experienceStarted = true;
-            }
+            stopExperience();
+            startExperience();
         });
 
         function startButtonFunctionality() {
@@ -336,7 +334,7 @@
         const resetButtonGeometry = new THREE.BoxGeometry(0.2, 0.1, 0.05);
         const resetButtonMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
         const resetButtonMesh = new THREE.Mesh(resetButtonGeometry, resetButtonMaterial);
-        resetButtonMesh.position.set(0, 1.5, -1);
+        resetButtonMesh.position.set(0.2, 1.5, -1);
         resetButtonMesh.name = 'resetButtonMesh';
         scene.add(resetButtonMesh);
 
@@ -377,11 +375,15 @@
                     intersect.object.material.color.set(0x00ff00);
                     hoveredObjects.add(intersect.object);
                     if (controller.userData.isSelecting) {
-                        if (experienceStarted) {
-                            stopExperience();
-                        }
+                        stopExperience();
                         startExperience();
-                        experienceStarted = true;
+                        intersect.object.material.color.set(0xff0000); // Reset color after selection
+                    }
+                } else if (intersect.object.name === 'startButtonMesh') {
+                    intersect.object.material.color.set(0x00ff00);
+                    hoveredObjects.add(intersect.object);
+                    if (controller.userData.isSelecting) {
+                        startExperience();
                         intersect.object.material.color.set(0xff0000); // Reset color after selection
                     }
                 }
@@ -432,11 +434,10 @@
                     if (intersects.length > 0) {
                         const intersect = intersects[0];
                         if (intersect.object.name === 'resetButtonMesh') {
-                            if (experienceStarted) {
-                                stopExperience();
-                            }
+                            stopExperience();
                             startExperience();
-                            experienceStarted = true;
+                        } else if (intersect.object.name === 'startButtonMesh') {
+                            startExperience();
                         }
                     }
                 }
