@@ -336,10 +336,17 @@
 
         window.addEventListener('resize', onWindowResize, false);
 
-        const resetButtonGeometry = new THREE.BoxGeometry(0.2, 0.1, 0.05);
+        const buttonGeometry = new THREE.BoxGeometry(0.2, 0.1, 0.05);
+        const startButtonMaterial = new THREE.MeshStandardMaterial({ color: 0x0000ff });
         const resetButtonMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 });
-        const resetButtonMesh = new THREE.Mesh(resetButtonGeometry, resetButtonMaterial);
-        resetButtonMesh.position.set(0.2, 1.5, -1);
+
+        const startButtonMesh = new THREE.Mesh(buttonGeometry, startButtonMaterial);
+        startButtonMesh.position.set(0.2, 1.5, -1);
+        startButtonMesh.name = 'startButtonMesh';
+        scene.add(startButtonMesh);
+
+        const resetButtonMesh = new THREE.Mesh(buttonGeometry, resetButtonMaterial);
+        resetButtonMesh.position.set(-0.2, 1.5, -1);
         resetButtonMesh.name = 'resetButtonMesh';
         scene.add(resetButtonMesh);
 
