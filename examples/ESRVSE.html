@@ -205,14 +205,14 @@
             }
         }
 
-video.addEventListener('canplaythrough', () => {
-    isVideoLoaded = true;
-    checkAllLoaded();
-});
-if (video.readyState >= 4) {
-    isVideoLoaded = true;
-    checkAllLoaded();
-}
+        video.addEventListener('canplaythrough', () => {
+            isVideoLoaded = true;
+            checkAllLoaded();
+        });
+        if (video.readyState >= 4) {
+            isVideoLoaded = true;
+            checkAllLoaded();
+        }
 
         function disposeObject(obj) {
             if (obj.geometry) obj.geometry.dispose();
@@ -226,21 +226,21 @@ if (video.readyState >= 4) {
             if (obj.texture) obj.texture.dispose();
         }
 
-function animate() {
-    renderer.setAnimationLoop(() => {
-        const delta = clock.getDelta();
-        if (mixer) {
-            mixer.update(delta);
+        function animate() {
+            renderer.setAnimationLoop(() => {
+                const delta = clock.getDelta();
+                if (mixer) {
+                    mixer.update(delta);
+                }
+                if (video && video.readyState >= video.HAVE_CURRENT_DATA) {
+                    videoTexture.needsUpdate = true;
+                }
+                cleanIntersected();
+                intersectObjects(controller1);
+                intersectObjects(controller2);
+                renderer.render(scene, camera);
+            });
         }
-        if (video.readyState >= video.HAVE_CURRENT_DATA) {
-            videoTexture.needsUpdate = true;
-        }
-        cleanIntersected();
-        intersectObjects(controller1);
-        intersectObjects(controller2);
-        renderer.render(scene, camera);
-    });
-}
 
         function onSessionStarted(session) {
             session.requestReferenceSpace('local').then(function (referenceSpace) {
@@ -266,11 +266,11 @@ function animate() {
 
         renderer.xr.addEventListener('sessionstart', onSessionStarted);
 
-function onWindowResize() {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-}
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
 
         function stopExperience() {
             if (mixer) {
@@ -400,83 +400,79 @@ function onWindowResize() {
 
         raycaster = new THREE.Raycaster();
 
-
         // Add test cubes
-// Add test cubes
-const cubeColors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00];
-const cubes = [];
-for (let i = 0; i < 4; i++) {
-    const cubeGeometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
-    const cubeMaterial = new THREE.MeshStandardMaterial({ color: cubeColors[i] });
-    const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
-    // Arrange the cubes into two stacks on either side of the video screen
-    const xPos = i < 2 ? -0.5 : 0.5;
-    const yPos = 1.5 + (i % 2) * 0.3; // Stack cubes vertically
-    const zPos = -2;
-    cube.position.set(xPos, yPos, zPos);
-    scene.add(cube);
-    cubes.push(cube);
-}
+        const cubeColors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00];
+        const cubes = [];
+        for (let i = 0; i < 4; i++) {
+            const cubeGeometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
+            const cubeMaterial = new THREE.MeshStandardMaterial({ color: cubeColors[i] });
+            const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
+            // Arrange the cubes into two stacks on either side of the video screen
+            const xPos = i < 2 ? -0.5 : 0.5;
+            const yPos = 1.5 + (i % 2) * 0.3; // Stack cubes vertically
+            const zPos = -2;
+            cube.position.set(xPos, yPos, zPos);
+            scene.add(cube);
+            cubes.push(cube);
+        }
 
+        function getIntersections(controller) {
+            controller.updateMatrixWorld();
+            raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
+            raycaster.ray.direction.set(0, 0, -1).applyMatrix4(controller.matrixWorld);
+            return raycaster.intersectObjects(cubes, false);
+        }
 
-function getIntersections(controller) {
-    controller.updateMatrixWorld();
-    raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
-    raycaster.ray.direction.set(0, 0, -1).applyMatrix4(controller.matrixWorld);
-    return raycaster.intersectObjects(cubes, false);
-}
+        function onSelectStart(event) {
+            const controller = event.target;
+            const intersections = getIntersections(controller);
 
-function onSelectStart(event) {
-    const controller = event.target;
-    const intersections = getIntersections(controller);
+            if (intersections.length > 0) {
+                const intersection = intersections[0];
+                const object = intersection.object;
+                object.material.emissive.setHex(0xaaaaaa);
+                controller.attach(object);
+                controller.userData.selected = object;
+            }
 
-    if (intersections.length > 0) {
-        const intersection = intersections[0];
-        const object = intersection.object;
-        object.material.emissive.setHex(0xaaaaaa);
-        controller.attach(object);
-        controller.userData.selected = object;
-    }
+            controller.userData.targetRayMode = event.data.targetRayMode;
+        }
 
-    controller.userData.targetRayMode = event.data.targetRayMode;
-}
+        function onSelectEnd(event) {
+            const controller = event.target;
 
-function onSelectEnd(event) {
-    const controller = event.target;
+            if (controller.userData.selected !== undefined) {
+                const object = controller.userData.selected;
+                object.material.emissive.setHex(0x000000);
+                scene.attach(object);
+                controller.userData.selected = undefined;
+            }
+        }
 
-    if (controller.userData.selected !== undefined) {
-        const object = controller.userData.selected;
-        object.material.emissive.setHex(0x000000);
-        scene.attach(object);
-        controller.userData.selected = undefined;
-    }
-}
+        function intersectObjects(controller) {
+            if (controller.userData.targetRayMode === 'screen') return;
+            if (controller.userData.selected !== undefined) return;
 
-function intersectObjects(controller) {
-    if (controller.userData.targetRayMode === 'screen') return;
-    if (controller.userData.selected !== undefined) return;
+            const line = controller.getObjectByName('line');
+            const intersections = getIntersections(controller);
 
-    const line = controller.getObjectByName('line');
-    const intersections = getIntersections(controller);
+            if (intersections.length > 0) {
+                const intersection = intersections[0];
+                const object = intersection.object;
+                object.material.emissive.setHex(0xff0000);
+                intersected.push(object);
+                line.scale.z = intersection.distance;
+            } else {
+                line.scale.z = 5;
+            }
+        }
 
-    if (intersections.length > 0) {
-        const intersection = intersections[0];
-        const object = intersection.object;
-        object.material.emissive.setHex(0xff0000);
-        intersected.push(object);
-        line.scale.z = intersection.distance;
-    } else {
-        line.scale.z = 5;
-    }
-}
-
-function cleanIntersected() {
-    while (intersected.length) {
-        const object = intersected.pop();
-        object.material.emissive.setHex(0x000000);
-    }
-}
-
+        function cleanIntersected() {
+            while (intersected.length) {
+                const object = intersected.pop();
+                object.material.emissive.setHex(0x000000);
+            }
+        }
 
         renderer.setAnimationLoop(() => {
             const delta = clock.getDelta();
