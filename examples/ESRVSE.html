@@ -416,12 +416,14 @@
             cubes.push(cube);
         }
 
+        const draggableObjects = [...cubes];
+
         function getIntersections(controller) {
             const tempMatrix = new THREE.Matrix4();
             tempMatrix.identity().extractRotation(controller.matrixWorld);
             raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
             raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
-            return raycaster.intersectObjects(cubes, false);
+            return raycaster.intersectObjects(draggableObjects, false);
         }
 
         function onSelectStart(event) {
