@@ -39,7 +39,14 @@
         import { XRButton } from 'three/addons/webxr/XRButton.js';
         import { XRHandModelFactory } from 'three/addons/webxr/XRHandModelFactory.js';
         import { XRControllerModelFactory } from 'three/addons/webxr/XRControllerModelFactory.js';
-        import { World, System, Component, TagComponent, Types } from 'three/addons/libs/ecsy.module.js';
+
+        let container;
+        let camera, scene, renderer;
+        let controller1, controller2;
+        let controllerGrip1, controllerGrip2;
+        let raycaster;
+        const intersected = [];
+        let group;
 
         let isGLBLoaded = false;
         let isVideoLoaded = false;
@@ -71,14 +78,14 @@
         videoScreen.rotation.y = Math.PI;
         videoScreen.scale.set(-.2, .2, .2);
 
-        const scene = new THREE.Scene();
+        scene = new THREE.Scene();
         scene.add(videoScreen);
-        const renderer = new THREE.WebGLRenderer({ alpha: true });
+        renderer = new THREE.WebGLRenderer({ alpha: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
         const listener = new THREE.AudioListener();
-        const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 1000);
         renderer.xr.setReferenceSpaceType('local-floor');
         renderer.xr.enabled = true;
         document.body.appendChild(XRButton.createButton(renderer, { requiredFeatures: ['hit-test', 'hand-tracking'] }));
@@ -108,7 +115,7 @@
             };
             req.send();
         }
-      
+
         preloadVideo('https://dl.dropboxusercontent.com/scl/fi/9upajrftohbrvahzpli5i/NBA_AllStar_Demo_Clip-compress.mp4?rlkey=jceoyzehubnlrku5v0puv0bf6&st=9yhuvs3v&dl=1');
         const audioUrls = [
             'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/Ball_Stem.mp3',
@@ -354,141 +361,119 @@
 
         window.addEventListener('resize', onWindowResize, false);
 
-        const buttonGeometry = new THREE.BoxGeometry(0.2, 0.1, 0.05);
-        const resetButtonMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 });
-
-        const resetButtonMesh = new THREE.Mesh(buttonGeometry, resetButtonMaterial);
-        resetButtonMesh.position.set(-1, .9, -1.5);
-        resetButtonMesh.name = 'resetButtonMesh';
-        scene.add(resetButtonMesh);
-
-        const raycaster = new THREE.Raycaster();
+        // Hand and controller setup
 
         const controllerModelFactory = new XRControllerModelFactory();
-        const controller1 = renderer.xr.getController(0);
-        const controller2 = renderer.xr.getController(1);
-        const controllerGrip1 = renderer.xr.getControllerGrip(0);
-        const controllerGrip2 = renderer.xr.getControllerGrip(1);
-        controllerGrip1.add(controllerModelFactory.createControllerModel(controllerGrip1));
-        controllerGrip2.add(controllerModelFactory.createControllerModel(controllerGrip2));
+        controller1 = renderer.xr.getController(0);
+        controller1.addEventListener('selectstart', onSelectStart);
+        controller1.addEventListener('selectend', onSelectEnd);
         scene.add(controller1);
+
+        controller2 = renderer.xr.getController(1);
+        controller2.addEventListener('selectstart', onSelectStart);
+        controller2.addEventListener('selectend', onSelectEnd);
         scene.add(controller2);
+
+        controllerGrip1 = renderer.xr.getControllerGrip(0);
+        controllerGrip1.add(controllerModelFactory.createControllerModel(controllerGrip1));
         scene.add(controllerGrip1);
+
+        controllerGrip2 = renderer.xr.getControllerGrip(1);
+        controllerGrip2.add(controllerModelFactory.createControllerModel(controllerGrip2));
         scene.add(controllerGrip2);
 
-        const lineGeometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -1)]);
-        const lineMaterial = new THREE.LineBasicMaterial({ color: 0xffffff });
-        const line = new THREE.Line(lineGeometry, lineMaterial);
+        const geometry2 = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -1)]);
+        const line = new THREE.Line(geometry2);
         line.name = 'line';
         line.scale.z = 5;
+
         controller1.add(line.clone());
         controller2.add(line.clone());
 
-        class Object3D extends Component { }
+        raycaster = new THREE.Raycaster();
 
-        Object3D.schema = {
-            object: { type: Types.Ref }
-        };
+        // Draggable group
 
-        class Draggable extends Component { }
+        group = new THREE.Group();
+        scene.add(group);
 
-        Draggable.schema = {
-            // draggable states: [detached, hovered, to-be-attached, attached, to-be-detached]
-            state: { type: Types.String, default: 'none' },
-            originalParent: { type: Types.Ref, default: null },
-            attachedPointer: { type: Types.Ref, default: null }
-        };
+        function getIntersections(controller) {
+            controller.updateMatrixWorld();
+            raycaster.setFromCamera(controller.position, camera);
+            return raycaster.intersectObjects(group.children, false);
+        }
 
-        class Intersectable extends TagComponent { }
+        function onSelectStart(event) {
+            const controller = event.target;
+            const intersections = getIntersections(controller);
 
-        class HandRaySystem extends System {
-            init(attributes) {
-                this.handPointers = attributes.handPointers;
+            if (intersections.length > 0) {
+                const intersection = intersections[0];
+                const object = intersection.object;
+                object.material.emissive.b = 1;
+                controller.attach(object);
+                controller.userData.selected = object;
             }
 
-            execute() {
-                this.handPointers.forEach(hp => {
-                    let distance = null;
-                    let intersectingEntity = null;
-                    this.queries.intersectable.results.forEach(entity => {
-                        const object = entity.getComponent(Object3D).object;
-                        const intersections = raycaster.intersectObject(object, false); // Use raycaster
-                        if (intersections && intersections.length > 0) {
-                            if (distance == null || intersections[0].distance < distance) {
-                                distance = intersections[0].distance;
-                                intersectingEntity = entity;
-                            }
-                        }
-                    });
-                    if (distance) {
-                        hp.setCursor(distance);
-                        if (intersectingEntity.hasComponent(Draggable)) {
-                            const draggable = intersectingEntity.getMutableComponent(Draggable);
-                            const object = intersectingEntity.getComponent(Object3D).object;
-                            object.scale.set(1.1, 1.1, 1.1);
-                            if (hp.isPinched()) {
-                                if (!hp.isAttached() && draggable.state != 'attached') {
-                                    draggable.state = 'to-be-attached';
-                                    draggable.attachedPointer = hp;
-                                    hp.setAttached(true);
-                                }
-                            } else {
-                                if (hp.isAttached() && draggable.state == 'attached') {
-                                    draggable.state = 'to-be-detached';
-                                    draggable.attachedPointer = null;
-                                    hp.setAttached(false);
-                                }
-                            }
-                        }
-                    } else {
-                        hp.setCursor(1.5);
-                    }
-                });
+            controller.userData.targetRayMode = event.data.targetRayMode;
+        }
+
+        function onSelectEnd(event) {
+            const controller = event.target;
+
+            if (controller.userData.selected !== undefined) {
+                const object = controller.userData.selected;
+                object.material.emissive.b = 0;
+                group.attach(object);
+                controller.userData.selected = undefined;
             }
         }
 
-        HandRaySystem.queries = {
-            intersectable: {
-                components: [Intersectable]
+        function intersectObjects(controller) {
+            if (controller.userData.targetRayMode === 'screen') return;
+            if (controller.userData.selected !== undefined) return;
+
+            const line = controller.getObjectByName('line');
+            const intersections = getIntersections(controller);
+
+            if (intersections.length > 0) {
+                const intersection = intersections[0];
+                const object = intersection.object;
+                object.material.emissive.r = 1;
+                intersected.push(object);
+                line.scale.z = intersection.distance;
+            } else {
+                line.scale.z = 5;
             }
-        };
+        }
 
-        const world = new World();
-        world.registerComponent(Object3D)
-            .registerComponent(Draggable)
-            .registerComponent(Intersectable)
-            .registerSystem(HandRaySystem, { handPointers: [controller1, controller2] });
-
-        const handModelFactory = new XRHandModelFactory();
-        const hand1 = renderer.xr.getHand(0);
-        hand1.add(handModelFactory.createHandModel(hand1));
-        scene.add(hand1);
-
-        const hand2 = renderer.xr.getHand(1);
-        hand2.add(handModelFactory.createHandModel(hand2));
-        scene.add(hand2);
-
-        const draggableObjects = [court]; // Add other objects if needed
-
-        draggableObjects.forEach(object => {
-            const entity = world.createEntity();
-            entity.addComponent(Object3D, { object });
-            entity.addComponent(Draggable);
-            entity.addComponent(Intersectable);
-        });
+        function cleanIntersected() {
+            while (intersected.length) {
+                const object = intersected.pop();
+                object.material.emissive.r = 0;
+            }
+        }
 
         renderer.setAnimationLoop(() => {
             const delta = clock.getDelta();
-            const elapsedTime = clock.elapsedTime;
-            renderer.xr.updateCamera(camera);
-            world.execute(delta, elapsedTime);
             if (mixer) {
                 mixer.update(delta);
             }
             if (video.readyState >= video.HAVE_CURRENT_DATA) {
                 videoTexture.needsUpdate = true;
             }
+            cleanIntersected();
+            intersectObjects(controller1);
+            intersectObjects(controller2);
             renderer.render(scene, camera);
+        });
+
+        // Load the GLTF model as part of the group
+        const gltfLoader = new GLTFLoader();
+        gltfLoader.load('path/to/your/gltf/model.glb', (gltf) => {
+            const model = gltf.scene;
+            model.position.set(0, 0, -1);
+            group.add(model);
         });
     </script>
 </body>
