@@ -392,10 +392,17 @@
 
         raycaster = new THREE.Raycaster();
 
+        // Add a test cube
+        const cubeGeometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
+        const cubeMaterial = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
+        const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
+        cube.position.set(0, 1.5, -2);
+        scene.add(cube);
+
         function getIntersections(controller) {
             controller.updateMatrixWorld();
             raycaster.setFromCamera(controller.position, camera);
-            return raycaster.intersectObjects(court.children, false);
+            return raycaster.intersectObjects([court, cube], false);
         }
 
         function onSelectStart(event) {
@@ -419,7 +426,7 @@
             if (controller.userData.selected !== undefined) {
                 const object = controller.userData.selected;
                 object.material.emissive.b = 0;
-                court.attach(object);
+                scene.attach(object);
                 controller.userData.selected = undefined;
             }
         }
