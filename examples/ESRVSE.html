@@ -432,6 +432,7 @@
         const draggableObjects = [draggableCube];
         let selectedObject = null;
         let initialParentPosition = new THREE.Vector3();
+        let initialCubePosition = new THREE.Vector3();
 
         function getIntersections(controller) {
             const tempMatrix = new THREE.Matrix4();
@@ -453,8 +454,9 @@
                 controller.userData.selected = object;
                 selectedObject = object;
 
-                // Store the initial position of the parent scene
+                // Store the initial position of the parent scene and the cube
                 initialParentPosition.copy(sceneParent.position);
+                initialCubePosition.copy(draggableCube.position);
             }
 
             controller.userData.targetRayMode = event.data.targetRayMode;
@@ -547,7 +549,8 @@
 
             // Update the scene position continuously if an object is selected
             if (selectedObject) {
-                sceneParent.position.copy(draggableCube.position);
+                const cubeDelta = new THREE.Vector3().subVectors(draggableCube.position, initialCubePosition);
+                sceneParent.position.copy(initialParentPosition.clone().add(cubeDelta));
             }
 
             renderer.render(scene, camera);
