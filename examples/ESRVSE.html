@@ -128,51 +128,62 @@
         const audioLoader = new THREE.AudioLoader();
 
         const loader = new GLTFLoader();
-        loader.load('https://raw.githubusercontent.com/zpennachi/three.js/master/examples/nba-as-final.glb', function (gltf) {
-            court = gltf.scene;
-            court.scale.set(0.1, 0.1, 0.1);
-            court.position.set(0, .7, -1);
-            scene.add(court);
+loader.load('https://raw.githubusercontent.com/zpennachi/three.js/master/examples/nba-as-final.glb', function (gltf) {
+    court = gltf.scene;
+    court.scale.set(0.1, 0.1, 0.1);
+    court.position.set(0, .7, -1);
+    scene.add(court);
 
-            mixer = new THREE.AnimationMixer(court);
-            gltf.animations.forEach((clip) => {
-                mixer.clipAction(clip).play();
-            });
+    mixer = new THREE.AnimationMixer(court);
+    gltf.animations.forEach((clip) => {
+        mixer.clipAction(clip).play();
+    });
 
-            court.traverse((child) => {
-                if (child.isMesh && child.material) {
-                    // Keep the original material for the court plane
-                    if (child.name === 'courtPlane') {
-                        child.material = new THREE.MeshStandardMaterial({ map: videoTexture });
+    court.traverse((child) => {
+        if (child.isMesh && child.material) {
+            // Keep the original material for the court plane
+            if (child.name === 'courtPlane') {
+                child.material = new THREE.MeshStandardMaterial({ map: videoTexture });
+            }
+
+            const index = modelIDs.indexOf(child.name);
+            if (index !== -1) {
+                audioLoader.load(audioUrls[index], (buffer) => {
+                    const audio = new THREE.PositionalAudio(listener);
+                    audio.setBuffer(buffer);
+                    audio.setRefDistance(1);
+                    audio.setDistanceModel('exponential');
+                    audio.setRolloffFactor(2.5);
+                    child.add(audio);
+                    audioSources.push(audio);
+                    audioLoadedCount++;
+                    if (audioLoadedCount === audioUrls.length) {
+                        allAudioLoaded = true;
+                        checkAllLoaded();
                     }
+                }, undefined, function (error) {
+                    console.error(`Error loading audio for model ${child.name}:`, error);
+                });
+            }
+        }
+    });
 
-                    const index = modelIDs.indexOf(child.name);
-                    if (index !== -1) {
-                        audioLoader.load(audioUrls[index], (buffer) => {
-                            const audio = new THREE.PositionalAudio(listener);
-                            audio.setBuffer(buffer);
-                            audio.setRefDistance(1);
-                            audio.setDistanceModel('exponential');
-                            audio.setRolloffFactor(2.5);
-                            child.add(audio);
-                            audioSources.push(audio);
-                            audioLoadedCount++;
-                            if (audioLoadedCount === audioUrls.length) {
-                                allAudioLoaded = true;
-                                checkAllLoaded();
-                            }
-                        }, undefined, function (error) {
-                            console.error(`Error loading audio for model ${child.name}:`, error);
-                        });
-                    }
-                }
-            });
+    // Add the draggable cube here
+    const draggableCubeGeometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
+    const draggableCubeMaterial = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
+    const draggableCube = new THREE.Mesh(draggableCubeGeometry, draggableCubeMaterial);
+    draggableCube.position.set(0, 1.5, -1);
+    scene.add(draggableCube);
+    court.add(draggableCube);
 
-            isGLBLoaded = true;
-            checkAllLoaded();
-        }, undefined, function (error) {
-            console.error('An error happened during the loading of the GLB:', error);
-        });
+    // Ensure the draggable cube is in the list of draggable objects
+    draggableObjects.push(draggableCube);
+
+    isGLBLoaded = true;
+    checkAllLoaded();
+}, undefined, function (error) {
+    console.error('An error happened during the loading of the GLB:', error);
+});
 
         const nonSpatialAudioUrl = 'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/AllStar_Game_FOH.mp3';
         const nonSpatialAudio = new THREE.Audio(listener);
@@ -423,7 +434,7 @@
         scene.add(draggableCube);
         court.add(draggableCube);
 
-        const draggableObjects = [...cubes, draggableCube];
+        const draggableObjects = [...cubes];
 
         function getIntersections(controller) {
             const tempMatrix = new THREE.Matrix4();
