@@ -120,33 +120,30 @@
 
             court.traverse((child) => {
                 if (child.isMesh && child.material) {
+                    // Keep the original material for the court plane
                     if (child.name === 'courtPlane') {
-                        // Keep the original material for the court plane
                         child.material = new THREE.MeshStandardMaterial({ map: videoTexture });
-                    } else {
-                        // Set standard material for other models
-                        child.material = new THREE.MeshStandardMaterial({ color: 0x808080 });
                     }
-                }
 
-                const index = modelIDs.indexOf(child.name);
-                if (index !== -1) {
-                    audioLoader.load(audioUrls[index], (buffer) => {
-                        const audio = new THREE.PositionalAudio(listener);
-                        audio.setBuffer(buffer);
-                        audio.setRefDistance(1);
-                        audio.setDistanceModel('exponential');
-                        audio.setRolloffFactor(2.5);
-                        child.add(audio);
-                        audioSources.push(audio);
-                        audioLoadedCount++;
-                        if (audioLoadedCount === audioUrls.length) {
-                            allAudioLoaded = true;
-                            checkAllLoaded();
-                        }
-                    }, undefined, function (error) {
-                        console.error(`Error loading audio for model ${child.name}:`, error);
-                    });
+                    const index = modelIDs.indexOf(child.name);
+                    if (index !== -1) {
+                        audioLoader.load(audioUrls[index], (buffer) => {
+                            const audio = new THREE.PositionalAudio(listener);
+                            audio.setBuffer(buffer);
+                            audio.setRefDistance(1);
+                            audio.setDistanceModel('exponential');
+                            audio.setRolloffFactor(2.5);
+                            child.add(audio);
+                            audioSources.push(audio);
+                            audioLoadedCount++;
+                            if (audioLoadedCount === audioUrls.length) {
+                                allAudioLoaded = true;
+                                checkAllLoaded();
+                            }
+                        }, undefined, function (error) {
+                            console.error(`Error loading audio for model ${child.name}:`, error);
+                        });
+                    }
                 }
             });
 
