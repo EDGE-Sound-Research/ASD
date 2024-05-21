@@ -12,6 +12,23 @@
             }
         }
     </script>
+    <style>
+        button {
+            position: fixed;
+            z-index: 1;
+            padding: 10px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        #startButton1 {
+            top: 10px;
+            left: 10px;
+        }
+        #resetButton {
+            top: 50px;
+            left: 10px;
+        }
+    </style>
 </head>
 <body>
     <button id="startButton1" disabled>Start Experience</button>
@@ -92,7 +109,7 @@
             req.send();
         }
       
-		preloadVideo('https://dl.dropboxusercontent.com/scl/fi/9upajrftohbrvahzpli5i/NBA_AllStar_Demo_Clip-compress.mp4?rlkey=jceoyzehubnlrku5v0puv0bf6&st=9yhuvs3v&dl=1');
+        preloadVideo('https://dl.dropboxusercontent.com/scl/fi/9upajrftohbrvahzpli5i/NBA_AllStar_Demo_Clip-compress.mp4?rlkey=jceoyzehubnlrku5v0puv0bf6&st=9yhuvs3v&dl=1');
         const audioUrls = [
             'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/Ball_Stem.mp3',
             'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/Player1_Stem.mp3',
@@ -395,7 +412,7 @@
                     let intersectingEntity = null;
                     this.queries.intersectable.results.forEach(entity => {
                         const object = entity.getComponent(Object3D).object;
-                        const intersections = hp.intersectObject(object, false);
+                        const intersections = raycaster.intersectObject(object, false); // Use raycaster
                         if (intersections && intersections.length > 0) {
                             if (distance == null || intersections[0].distance < distance) {
                                 distance = intersections[0].distance;
