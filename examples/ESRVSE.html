@@ -436,32 +436,39 @@
         let initialCubePosition = new THREE.Vector3();
 
         function getIntersections(controller) {
-            const tempMatrix = new THREE.Matrix4();
-            tempMatrix.identity().extractRotation(controller.matrixWorld);
-            raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
-            raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
-            return raycaster.intersectObjects(draggableObjects, false);
-        }
+    const tempMatrix = new THREE.Matrix4();
+    tempMatrix.identity().extractRotation(controller.matrixWorld);
+    raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
+    raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
+    return raycaster.intersectObjects([...draggableObjects, ...buttonCubes], false);
+}
 
         function onSelectStart(event) {
-            const controller = event.target;
-            const intersections = getIntersections(controller);
+    const controller = event.target;
+    const intersections = getIntersections(controller);
 
-            if (intersections.length > 0) {
-                const intersection = intersections[0];
-                const object = intersection.object;
-                object.material.emissive.setHex(0xaaaaaa);
-                controller.attach(object);
-                controller.userData.selected = object;
-                selectedObject = object;
+    if (intersections.length > 0) {
+        const intersection = intersections[0];
+        const object = intersection.object;
 
-                // Store the initial position of the parent scene and the cube
-                initialParentPosition.copy(sceneParent.position);
-                initialCubePosition.copy(draggableCube.position);
-            }
-
-            controller.userData.targetRayMode = event.data.targetRayMode;
+        if (object.userData.isButton) {
+            object.userData.select();
+            return; // Do not allow dragging for buttons
         }
+
+        object.material.emissive.setHex(0xaaaaaa);
+        controller.attach(object);
+        controller.userData.selected = object;
+        selectedObject = object;
+
+        // Store the initial position of the parent scene and the cube
+        initialParentPosition.copy(sceneParent.position);
+        initialCubePosition.copy(draggableCube.position);
+    }
+
+    controller.userData.targetRayMode = event.data.targetRayMode;
+}
+
 
         function onSelectEnd(event) {
             const controller = event.target;
@@ -526,37 +533,38 @@
 
         // Add hover and select interaction to button cubes
         function addButtonCubeInteractions() {
-            buttonCubes.forEach(cube => {
-                cube.userData.isButton = true;
-                cube.userData.hoverStart = () => onButtonCubeHoverStart(cube);
-                cube.userData.hoverEnd = () => onButtonCubeHoverEnd(cube);
-                cube.userData.select = () => onButtonCubeSelect(cube);
-                draggableObjects.push(cube);
-            });
-        }
+    buttonCubes.forEach(cube => {
+        cube.userData.isButton = true;
+        cube.userData.hoverStart = () => onButtonCubeHoverStart(cube);
+        cube.userData.hoverEnd = () => onButtonCubeHoverEnd(cube);
+        cube.userData.select = () => onButtonCubeSelect(cube);
+    });
+}
+
 
         addButtonCubeInteractions();
 
         renderer.setAnimationLoop(() => {
-            const delta = clock.getDelta();
-            if (mixer) {
-                mixer.update(delta);
-            }
-            if (video.readyState >= video.HAVE_CURRENT_DATA) {
-                videoTexture.needsUpdate = true;
-            }
-            cleanIntersected();
-            intersectObjects(controller1);
-            intersectObjects(controller2);
+    const delta = clock.getDelta();
+    if (mixer) {
+        mixer.update(delta);
+    }
+    if (video.readyState >= video.HAVE_CURRENT_DATA) {
+        videoTexture.needsUpdate = true;
+    }
+    cleanIntersected();
+    intersectObjects(controller1);
+    intersectObjects(controller2);
 
-            // Update the scene position continuously if an object is selected
-            if (selectedObject) {
-                const cubeDelta = new THREE.Vector3().subVectors(draggableCube.position, initialCubePosition);
-                sceneParent.position.copy(initialParentPosition.clone().add(cubeDelta));
-            }
+    // Update the scene position continuously if the draggable cube is selected
+    if (selectedObject && selectedObject === draggableCube) {
+        const cubeDelta = new THREE.Vector3().subVectors(draggableCube.position, initialCubePosition);
+        sceneParent.position.copy(initialParentPosition.clone().add(cubeDelta));
+    }
 
-            renderer.render(scene, camera);
-        });
+    renderer.render(scene, camera);
+});
+
     </script>
 </body>
 </html>
