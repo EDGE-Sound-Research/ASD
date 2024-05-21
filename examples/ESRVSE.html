@@ -199,6 +199,18 @@
             checkAllLoaded();
         }
 
+        function disposeObject(obj) {
+            if (obj.geometry) obj.geometry.dispose();
+            if (obj.material) {
+                if (Array.isArray(obj.material)) {
+                    obj.material.forEach(material => material.dispose());
+                } else {
+                    obj.material.dispose();
+                }
+            }
+            if (obj.texture) obj.texture.dispose();
+        }
+
         function animate() {
             renderer.setAnimationLoop(() => {
                 // Calculate the time delta
