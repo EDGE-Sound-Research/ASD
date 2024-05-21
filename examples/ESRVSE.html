@@ -470,7 +470,7 @@
 
         // Load the GLTF model as part of the group
         const gltfLoader = new GLTFLoader();
-        gltfLoader.load(https://raw.githubusercontent.com/zpennachi/three.js/master/examples/nba-as-final.glb', (gltf) => {
+        gltfLoader.load('https://raw.githubusercontent.com/zpennachi/three.js/master/examples/nba-as-final.glb', (gltf) => {
             const model = gltf.scene;
             model.position.set(0, 0, -1);
             group.add(model);
