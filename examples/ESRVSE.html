@@ -601,12 +601,10 @@
         function onButtonCubeSelect(cube) {
             const index = buttonCubes.indexOf(cube);
             if (index === 0) {
-			 togglePlayPause();
-
+                togglePlayPause();
             } else if (index === 1) {
-				    stopExperience();
+                stopExperience();
                 startExperience();
-
             } else if (index === 2) {
                 toggleScale();
             } else if (index === 3) {
@@ -650,6 +648,7 @@
                 sceneParent.scale.set(10, 10, 10);
             }
             isScaledUp = !isScaledUp;
+            toggleCubeModel(buttonCubes[2], isScaledUp ? 'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/scale-down.glb' : 'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/scale-up.glb'); // Update the model for the scale button
         }
 
         function togglePlayPause() {
@@ -671,6 +670,7 @@
                 video.pause();
             }
             isPaused = !isPaused;
+            toggleCubeModel(buttonCubes[0], isPaused ? 'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/btn-play-new.glb' : 'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/pause.glb'); // Update the model for the play/pause button
         }
 
         function toggleVolume() {
@@ -680,6 +680,7 @@
                 nonSpatialAudio.setVolume(1); // Set to loud volume
             }
             isLoud = !isLoud;
+            toggleCubeModel(buttonCubes[3], isLoud ? 'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/FOH-high.glb' : 'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/FOH-low.glb'); // Update the model for the volume button
         }
 
         // Function to load and attach GLB model
@@ -694,12 +695,21 @@
             });
         }
 
+        // Function to toggle between models
+        function toggleCubeModel(cube, url) {
+            if (cube.userData.attachedGLB) {
+                cube.remove(cube.userData.attachedGLB);
+                disposeObject(cube.userData.attachedGLB);
+            }
+            loadAndAttachGLB(url, cube);
+        }
+
         // Replace these URLs with the actual URLs of your GLB files
         const glbUrls = [
             'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/btn-play-new.glb',
             'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/restart.glb',
-            'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/scale.glb',
-            'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/FOH-low.glb',
+            'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/scale-up.glb',
+            'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/FOH-high.glb',
             'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/nav-sphere.glb' // For the draggable cube
         ];
 
