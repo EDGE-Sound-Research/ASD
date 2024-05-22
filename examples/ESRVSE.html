@@ -116,34 +116,43 @@
         }
 
         // Load GLB models for all buttons
-        for (let i = 0; i < 4; i++) {
-            loadGLBModel(glbModelUrl, (model) => {
-                const xPos = (i - 1.5) * 0.5; // Adjust the horizontal position
-                const yPos = 0.7; // Slightly above the video screen
-                const zPos = -0.4; // Match the depth of the video screen
-                model.position.set(xPos, yPos, zPos);
-                const hitbox = new THREE.BoxHelper(model, 0xffff00);
-                hitbox.userData = {
-                    isButton: true,
-                    select: () => onButtonCubeSelect(hitbox)
-                };
-                sceneParent.add(hitbox);
-                sceneParent.add(model);
-                buttonCubes.push(hitbox);
-            });
-        }
+for (let i = 0; i < 4; i++) {
+  loadGLBModel(glbModelUrl, (model) => {
+    const xPos = (i - 1.5) * 0.5; // Adjust the horizontal position
+    const yPos = 0.7; // Slightly above the video screen
+    const zPos = -0.4; // Match the depth of the video screen
+    model.position.set(xPos, yPos, zPos);
 
-        // Load GLB model for the draggable cube
-        loadGLBModel(glbModelUrl, (model) => {
-            model.position.copy(initialCubePosition); // Set the initial position
-            const hitbox = new THREE.BoxHelper(model, 0x00ff00);
-            hitbox.userData = {
-                isDraggable: true
-            };
-            sceneParent.add(hitbox);
-            sceneParent.add(model);
-            buttonCubes.push(hitbox); // Add the draggable model to the buttonCubes array for interaction
-        });
+    // Create a box3 hitbox
+    const box = new THREE.Box3().setFromObject(model);
+    const hitbox = new THREE.Box3Helper(box, 0xffff00);
+    hitbox.visible = false; // Hide hitbox for normal use, show for debugging
+    hitbox.userData = {
+      isButton: true,
+      select: () => onButtonCubeSelect(model)
+    };
+    sceneParent.add(hitbox);
+    sceneParent.add(model);
+    buttonCubes.push({ model, hitbox });
+  });
+}
+
+// Load GLB model for the draggable cube
+loadGLBModel(glbModelUrl, (model) => {
+  model.position.copy(initialCubePosition);
+
+  // Create a box3 hitbox
+  const box = new THREE.Box3().setFromObject(model);
+  const hitbox = new THREE.Box3Helper(box, 0x00ff00);
+  hitbox.visible = false; // Hide hitbox for normal use, show for debugging
+  hitbox.userData = {
+    isDraggable: true
+  };
+  sceneParent.add(hitbox);
+  sceneParent.add(model);
+  buttonCubes.push({ model, hitbox });
+});
+
 
         // Add the video screen to the sceneParent
         sceneParent.add(videoScreen);
@@ -481,33 +490,39 @@
         let initialParentPosition = new THREE.Vector3();
         initialCubePosition.copy(new THREE.Vector3(0, 0, 0)); // Ensure initialCubePosition is set
 
-        function getIntersections(controller) {
-            const tempMatrix = new THREE.Matrix4();
-            tempMatrix.identity().extractRotation(controller.matrixWorld);
-            raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
-            raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
-            return raycaster.intersectObjects(buttonCubes, true); // Intersect with buttonCubes
-        }
+       function getIntersections(controller) {
+  const tempMatrix = new THREE.Matrix4();
+  tempMatrix.identity().extractRotation(controller.matrixWorld);
+  raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
+  raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
 
-        function intersectObjects(controller) {
-            if (controller.userData.targetRayMode === 'screen') return;
-            if (controller.userData.selected !== undefined) return;
+  const intersects = [];
+  buttonCubes.forEach(({ model, hitbox }) => {
+    if (raycaster.ray.intersectsBox(hitbox.box)) {
+      intersects.push({ object: model });
+    }
+  });
+  return intersects;
+}
 
-            const line = controller.getObjectByName('line');
-            const intersections = getIntersections(controller);
+function intersectObjects(controller) {
+  if (controller.userData.targetRayMode === 'screen') return;
+  if (controller.userData.selected !== undefined) return;
+  const line = controller.getObjectByName('line');
+  const intersections = getIntersections(controller);
+  if (intersections.length > 0) {
+    const intersection = intersections[0];
+    const object = intersection.object;
+    if (object.userData.isButton) {
+      onButtonCubeHoverStart(object);
+    }
+    intersected.push(object);
+    line.scale.z = intersection.distance;
+  } else {
+    line.scale.z = 5;
+  }
+}
 
-            if (intersections.length > 0) {
-                const intersection = intersections[0];
-                const object = intersection.object;
-                if (object.userData.isButton) {
-                    onButtonCubeHoverStart(object);
-                }
-                intersected.push(object);
-                line.scale.z = intersection.distance;
-            } else {
-                line.scale.z = 5;
-            }
-        }
 
         function onSelectStart(event) {
             const controller = event.target;
