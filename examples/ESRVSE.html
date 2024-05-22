@@ -391,9 +391,9 @@
 
         function toggleScale() {
     if (isScaledUp) {
-        sceneParent.scale.set(10, 10, 10); // Scale down to original size
+        sceneParent.scale.set(1, 1, 1); // Scale down to original size
     } else {
-        sceneParent.scale.set(1, 1, 1); // Scale up
+        sceneParent.scale.set(10, 10, 10); // Scale up
     }
     isScaledUp = !isScaledUp;
     toggleCubeModel(buttonCubes[2], isScaledUp ? 'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/scale-down.glb' : 'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/scale-up.glb'); // Update the model for the scale button
