@@ -20,32 +20,18 @@
             font-size: 16px;
             cursor: pointer;
         }
-        #playPauseButton {
+        #playPauseButton, #restartButton, #scaleButton, #volumeButton {
+            display: none;
+        }
+        #startXRButton {
             top: 10px;
             left: 10px;
-        }
-        #restartButton {
-            top: 50px;
-            left: 10px;
-        }
-        #scaleButton {
-            top: 90px;
-            left: 10px;
-        }
-        #volumeButton {
-            top: 130px;
-            left: 10px;
-        }
-        .hidden {
-            display: none;
         }
     </style>
 </head>
 <body>
-    <button id="playPauseButton" class="hidden">Play/Pause</button>
-    <button id="restartButton" class="hidden">Restart Experience</button>
-    <button id="scaleButton" class="hidden">Toggle Scale</button>
-    <button id="volumeButton" class="hidden">Toggle Volume</button>
+    <button id="startXRButton">Start XR</button>
+    <button id="restartXRButton">Restart Experience</button>
     <script type="module">
         import * as THREE from 'three';
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -232,12 +218,12 @@
         function checkAllLoaded() {
             console.log(`GLB Loaded: ${isGLBLoaded}, Video Loaded: ${isVideoLoaded}, All Audio Loaded: ${allAudioLoaded}`);
             if (isGLBLoaded && isVideoLoaded && allAudioLoaded) {
-                const playPauseButton = document.getElementById('playPauseButton');
-                if (playPauseButton) {
-                    playPauseButton.disabled = false;
-                    console.log("Play/Pause Button enabled.");
+                const startXRButton = document.getElementById('startXRButton');
+                if (startXRButton) {
+                    startXRButton.disabled = false;
+                    console.log("Start XR Button enabled.");
                 } else {
-                    console.log("Play/Pause Button not found!");
+                    console.log("Start XR Button not found!");
                 }
                 console.log("All assets loaded. Ready to start!");
             }
@@ -329,8 +315,15 @@
             video.pause();
             video.currentTime = 0;
 
-            // Hide play/pause button
-            document.getElementById('playPauseButton').classList.add('hidden');
+            // Hide the entire scene
+            scene.visible = false;
+
+            // Show XR restart button
+            const restartXRButton = document.getElementById('restartXRButton');
+            restartXRButton.style.display = 'block';
+            restartXRButton.style.position = 'absolute';
+            restartXRButton.style.top = `${window.innerHeight / 2 - 50}px`;
+            restartXRButton.style.left = `${window.innerWidth / 2 - 50}px`;
         }
 
         function startExperience() {
@@ -354,29 +347,18 @@
             animate();
         }
 
-        document.getElementById('playPauseButton').addEventListener('click', () => {
-            togglePlayPause();
+        document.getElementById('startXRButton').addEventListener('click', () => {
+            startXR();
         });
 
-        document.getElementById('restartButton').addEventListener('click', () => {
-            document.getElementById('playPauseButton').classList.remove('hidden');
-            stopExperience();
+        document.getElementById('restartXRButton').addEventListener('click', () => {
+            // Restart the experience
+            scene.visible = true;
+            document.getElementById('restartXRButton').style.display = 'none';
             startExperience();
         });
 
-        document.getElementById('scaleButton').addEventListener('click', () => {
-            toggleScale();
-        });
-
-        document.getElementById('volumeButton').addEventListener('click', () => {
-            toggleVolume();
-        });
-
-        function startButtonFunctionality() {
-            document.querySelectorAll('.startButton').forEach(button => {
-                button.style.display = 'none';
-            });
-
+        function startXR() {
             const audioContext = THREE.AudioContext.getContext();
             if (audioContext.state === 'suspended') {
                 audioContext.resume().then(() => {
@@ -401,8 +383,6 @@
 
             startExperience();
         }
-
-        document.getElementById('playPauseButton').addEventListener('click', startButtonFunctionality);
 
         document.addEventListener('visibilitychange', function () {
             if (document.hidden) {
