@@ -340,6 +340,9 @@
             audioSources.forEach(audio => {
                 if (!audio.isPlaying) {
                     audio.play();
+                } else {
+                    audio.stop();
+                    audio.play();
                 }
             });
 
@@ -658,11 +661,11 @@
 
         // Replace these URLs with the actual URLs of your GLB files
         const glbUrls = [
-            'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/play.glb',
+            'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/btn-play-new.glb',
             'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/restart.glb',
             'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/scale.glb',
-            'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/play.glb',
-            'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/play.glb' // For the draggable cube
+            'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/btn-play-new.glb',
+            'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/btn-play-new.glb' // For the draggable cube
         ];
 
         // Adjust cube dimensions and make them transparent
