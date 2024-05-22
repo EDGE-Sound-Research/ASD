@@ -310,25 +310,27 @@ videoScreen.scale.set(-.3, .3, .3);
             renderer.setSize(window.innerWidth, window.innerHeight);
         }
 
-        function stopExperience() {
-            if (mixer) {
-                mixer.stopAllAction();
-                mixer._actions.forEach(action => {
-                    action.stop();
-                    action.reset();
-                });
-            }
-            audioSources.forEach(audio => {
-                if (audio.isPlaying) {
-                    audio.stop();
-                }
-            });
-            video.pause();
-            video.currentTime = 0;
-            isPaused = true; // Ensure the experience is paused when stopped
-            enablePlayPauseButton(); // Re-enable the play/pause button
-            enableResetButton(); // Enable the reset button
+function stopExperience() {
+    if (mixer) {
+        mixer.stopAllAction();
+        mixer._actions.forEach(action => {
+            action.stop();
+            action.reset();
+        });
+    }
+    audioSources.forEach(audio => {
+        if (audio.isPlaying) {
+            audio.stop();
         }
+    });
+    video.pause();
+    video.currentTime = 0;
+    isPaused = true; // Ensure the experience is paused when stopped
+    updatePlayPauseButton(); // Update the play/pause button to "play"
+    enablePlayPauseButton(); // Re-enable the play/pause button
+    enableResetButton(); // Enable the reset button
+}
+
 
         function startExperience() {
             clearTimeout(experienceTimer);
@@ -652,27 +654,30 @@ videoScreen.scale.set(-.3, .3, .3);
             toggleCubeModel(buttonCubes[2], isScaledUp ? 'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/scale-down.glb' : 'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/scale-up.glb'); // Update the model for the scale button
         }
 
-        function togglePlayPause() {
-            if (isPaused) {
-                mixer._actions.forEach(action => action.paused = false);
-                audioSources.forEach(audio => {
-                    if (!audio.isPlaying) {
-                        audio.play();
-                    }
-                });
-                video.play();
-            } else {
-                mixer._actions.forEach(action => action.paused = true);
-                audioSources.forEach(audio => {
-                    if (audio.isPlaying) {
-                        audio.pause();
-                    }
-                });
-                video.pause();
+function togglePlayPause() {
+    if (isPaused) {
+        mixer._actions.forEach(action => {
+            action.paused = false;
+            action.play();
+        });
+        audioSources.forEach(audio => {
+            if (!audio.isPlaying) {
+                audio.play();
             }
-            isPaused = !isPaused;
-            updatePlayPauseButton(); // Update the play/pause button state
-        }
+        });
+        video.play();
+    } else {
+        mixer._actions.forEach(action => action.paused = true);
+        audioSources.forEach(audio => {
+            if (audio.isPlaying) {
+                audio.pause();
+            }
+        });
+        video.pause();
+    }
+    isPaused = !isPaused;
+    updatePlayPauseButton(); // Update the play/pause button state
+}
 
         function toggleVolume() {
             if (isLoud) {
@@ -707,8 +712,9 @@ videoScreen.scale.set(-.3, .3, .3);
 
         // Function to update the play/pause button state
         function updatePlayPauseButton() {
-            toggleCubeModel(buttonCubes[0], isPaused ? 'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/btn-play-new.glb' : 'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/pause.glb');
-        }
+    toggleCubeModel(buttonCubes[0], isPaused ? 'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/btn-play-new.glb' : 'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/pause.glb');
+}
+
 
         // Replace these URLs with the actual URLs of your GLB files
         const glbUrls = [
