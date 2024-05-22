@@ -469,17 +469,18 @@ const buttonCubes = [];
 const cubeColors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00]; // Define colors for cubes
 
 for (let i = 0; i < 4; i++) {
-    const cubeGeometry = new THREE.BoxGeometry(0.13, 0.13, 0.13); // Adjusted size (30% larger than 0.1)
+    const cubeGeometry = new THREE.BoxGeometry(0.2, 0.2, 0.2); // Double the original size
     const cubeMaterial = new THREE.MeshStandardMaterial({ color: cubeColors[i] });
     const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
     // Position the cubes above the video screen in a horizontal line
-    const xPos = (i - 1.5) * 0.35; // Adjust the horizontal position to be closer together
-    const yPos = 1.0; // Adjust the vertical position slightly above the video screen
+    const xPos = (i - 1.5) * 0.3; // Tighten the horizontal spacing
+    const yPos = 0.85; // Lower the height slightly
     const zPos = -0.4; // Match the depth of the video screen
     cube.position.set(xPos, yPos, zPos);
     sceneParent.add(cube);
     buttonCubes.push(cube);
 }
+
         const draggableObjects = [draggableCube];
         let selectedObject = null;
         let initialParentPosition = new THREE.Vector3();
@@ -682,17 +683,18 @@ for (let i = 0; i < 4; i++) {
             toggleCubeModel(buttonCubes[3], isLoud ? 'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/FOH-high.glb' : 'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/FOH-low.glb'); // Update the model for the volume button
         }
 
-    // Function to load and attach GLB model
+// Function to load and attach GLB model
 function loadAndAttachGLB(url, parent) {
     loader.load(url, function (gltf) {
         const model = gltf.scene;
-        model.scale.set(0.325, 0.325, 0.325); // Adjust scale to fit within the slightly larger cube
+        model.scale.set(0.5, 0.5, 0.5); // Scale to fit within the larger cube
         parent.add(model);
         parent.userData.attachedGLB = model;
     }, undefined, function (error) {
         console.error('An error happened during the loading of the GLB:', error);
     });
 }
+
 
         // Function to toggle between models
         function toggleCubeModel(cube, url) {
