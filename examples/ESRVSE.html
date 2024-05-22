@@ -122,16 +122,27 @@
                 const yPos = 0.7; // Slightly above the video screen
                 const zPos = -0.4; // Match the depth of the video screen
                 model.position.set(xPos, yPos, zPos);
+                const hitbox = new THREE.BoxHelper(model, 0xffff00);
+                hitbox.userData = {
+                    isButton: true,
+                    select: () => onButtonCubeSelect(hitbox)
+                };
+                sceneParent.add(hitbox);
                 sceneParent.add(model);
-                buttonCubes.push(model);
+                buttonCubes.push(hitbox);
             });
         }
 
         // Load GLB model for the draggable cube
         loadGLBModel(glbModelUrl, (model) => {
             model.position.copy(initialCubePosition); // Set the initial position
+            const hitbox = new THREE.BoxHelper(model, 0x00ff00);
+            hitbox.userData = {
+                isDraggable: true
+            };
+            sceneParent.add(hitbox);
             sceneParent.add(model);
-            buttonCubes.push(model); // Add the draggable model to the buttonCubes array for interaction
+            buttonCubes.push(hitbox); // Add the draggable model to the buttonCubes array for interaction
         });
 
         // Add the video screen to the sceneParent
@@ -507,7 +518,7 @@
                 const object = intersection.object;
 
                 if (object.userData.isButton) {
-                    onButtonCubeSelect(object);
+                    object.userData.select();
                     return; // Do not allow dragging for buttons
                 }
 
