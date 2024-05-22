@@ -132,11 +132,7 @@
         // Load GLB model for the draggable cube
         loadGLBModel(glbModelUrl, (model) => {
             model.position.copy(initialCubePosition); // Set the initial position
-            model.traverse((child) => {
-                if (child.isMesh) {
-                    child.userData.isDraggable = true;
-                }
-            });
+            model.userData.isDraggable = true;
             sceneParent.add(model);
             buttonCubes.push(model); // Add the draggable model to the buttonCubes array for interaction
         });
@@ -541,8 +537,8 @@
                 controller.userData.selected = undefined;
 
                 // Ensure the scene follows the cube exactly
-                if (object === selectedObject) {
-                    const newCubePosition = selectedObject.position.clone();
+                if (object.userData.isDraggable) {
+                    const newCubePosition = object.position.clone();
                     sceneParent.position.copy(newCubePosition);
                     initialCubePosition.copy(newCubePosition);
                     initialParentPosition.copy(sceneParent.position);
