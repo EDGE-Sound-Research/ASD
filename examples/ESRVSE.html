@@ -60,13 +60,15 @@
         const clock = new THREE.Clock();
         let experienceTimer;
         const totalDuration = 120;
-        let isPaused = true; // Ensure the experience loads paused
+        let isPaused = true;
 
         let isGLBLoaded = false;
         let isVideoLoaded = false;
         let allAudioLoaded = false;
         let audioLoadedCount = 0;
-        let isLoud = true; // Initial volume state
+        let isLoud = true;
+
+        let isScaledUp = false; // Initialize the scale toggle variable
 
         const video = document.createElement('video');
         video.crossOrigin = "anonymous";
@@ -87,23 +89,17 @@
         videoScreen.rotation.y = Math.PI;
         videoScreen.scale.set(-.3, .3, .3);
 
-        // Create a parent object that will be draggable
         const sceneParent = new THREE.Group();
         scene = new THREE.Scene();
         scene.add(sceneParent);
 
-        // Initial position of the draggable cube
         const initialCubePosition = new THREE.Vector3(0, 0, 0);
-
-        // Apply the initial position to the draggable cube
         const draggableCubeGeometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
         const draggableCubeMaterial = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
         const draggableCube = new THREE.Mesh(draggableCubeGeometry, draggableCubeMaterial);
-        draggableCube.position.copy(initialCubePosition); // Set the initial position
+        draggableCube.position.copy(initialCubePosition);
         scene.add(draggableCube);
-        sceneParent.position.copy(initialCubePosition); // Set the sceneParent's initial position
-
-        // Add the video screen to the sceneParent
+        sceneParent.position.copy(initialCubePosition);
         sceneParent.add(videoScreen);
 
         renderer = new THREE.WebGLRenderer({ alpha: true });
@@ -167,13 +163,12 @@
             mixer = new THREE.AnimationMixer(court);
             gltf.animations.forEach((clip) => {
                 const action = mixer.clipAction(clip);
-                action.paused = true; // Ensure the animations start paused
+                action.paused = true;
                 action.play();
             });
 
             court.traverse((child) => {
                 if (child.isMesh && child.material) {
-                    // Keep the original material for the court plane
                     if (child.name === 'courtPlane') {
                         child.material = new THREE.MeshStandardMaterial({ map: videoTexture });
                     }
@@ -200,9 +195,8 @@
                 }
             });
 
-            // Center the draggable cube in the court
-            draggableCube.position.copy(initialCubePosition); // Use the initial position
-            sceneParent.position.copy(initialCubePosition); // Ensure sceneParent starts at the same position
+            draggableCube.position.copy(initialCubePosition);
+            sceneParent.position.copy(initialCubePosition);
 
             isGLBLoaded = true;
             checkAllLoaded();
@@ -215,7 +209,7 @@
         const nonSpatialAudioLoader = new THREE.AudioLoader();
         nonSpatialAudioLoader.load(nonSpatialAudioUrl, (buffer) => {
             nonSpatialAudio.setBuffer(buffer);
-            nonSpatialAudio.setVolume(1); // Set initial volume to loud
+            nonSpatialAudio.setVolume(1);
             listener.add(nonSpatialAudio);
             audioSources.push(nonSpatialAudio);
         });
@@ -294,8 +288,8 @@
                 offset.applyQuaternion(viewerRotation);
                 const spawnPoint = viewerPosition.clone().add(offset);
                 if (!draggableCube.position.equals(spawnPoint)) {
-                    draggableCube.position.copy(spawnPoint); // Apply offset to the draggable cube
-                    sceneParent.position.copy(spawnPoint); // Ensure sceneParent is at the cube's position
+                    draggableCube.position.copy(spawnPoint);
+                    sceneParent.position.copy(spawnPoint);
                 }
             }
             renderer.render(scene, camera);
@@ -316,7 +310,7 @@
                 mixer._actions.forEach(action => {
                     action.stop();
                     action.reset();
-                    action.paused = true; // Ensure actions are paused
+                    action.paused = true;
                 });
             }
             audioSources.forEach(audio => {
@@ -326,10 +320,10 @@
             });
             video.pause();
             video.currentTime = 0;
-            isPaused = true; // Ensure the experience is paused when stopped
-            updatePlayPauseButton(); // Update the play/pause button to "play"
-            enablePlayPauseButton(); // Re-enable the play/pause button
-            enableResetButton(); // Enable the reset button
+            isPaused = true;
+            updatePlayPauseButton();
+            enablePlayPauseButton();
+            enableResetButton();
         }
 
         function startExperience() {
@@ -349,8 +343,8 @@
             });
 
             video.play();
-            isPaused = false; // Ensure the experience is not paused
-            updatePlayPauseButton(); // Update the play/pause button state
+            isPaused = false;
+            updatePlayPauseButton();
             animate();
             enablePlayPauseButton();
         }
@@ -392,27 +386,25 @@
                 video.pause();
             }
             isPaused = !isPaused;
-            updatePlayPauseButton(); // Update the play/pause button state
+            updatePlayPauseButton();
         }
 
         function toggleScale() {
             if (isScaledUp) {
-                sceneParent.scale.set(1, 1, 1);
+                sceneParent.scale.set(0.1, 0.1, 0.1);
             } else {
-                sceneParent.scale.set(10, 10, 10);
+                sceneParent.scale.set(1, 1, 1);
             }
             isScaledUp = !isScaledUp;
-            toggleCubeModel(buttonCubes[2], isScaledUp ? 'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/scale-down.glb' : 'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/scale-up.glb'); // Update the model for the scale button
         }
 
         function toggleVolume() {
             if (isLoud) {
-                nonSpatialAudio.setVolume(0.2); // Set to soft volume
+                nonSpatialAudio.setVolume(0.2);
             } else {
-                nonSpatialAudio.setVolume(1); // Set to loud volume
+                nonSpatialAudio.setVolume(1);
             }
             isLoud = !isLoud;
-            toggleCubeModel(buttonCubes[3], isLoud ? 'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/FOH-high.glb' : 'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/FOH-low.glb'); // Update the model for the volume button
         }
 
         function startButtonFunctionality() {
@@ -445,7 +437,6 @@
             startExperience();
         }
 
-        // Hand and controller setup
         const controllerModelFactory = new XRControllerModelFactory();
         controller1 = renderer.xr.getController(0);
         controller1.addEventListener('selectstart', onSelectStart);
@@ -484,18 +475,16 @@
 
         raycaster = new THREE.Raycaster();
 
-        // Add static cubes as buttons
         const buttonCubes = [];
-        const cubeColors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00]; // Define colors for cubes
+        const cubeColors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00];
 
         for (let i = 0; i < 4; i++) {
-            const cubeGeometry = new THREE.BoxGeometry(0.4, 0.4, 0.4); // Double the original size
+            const cubeGeometry = new THREE.BoxGeometry(0.4, 0.4, 0.4);
             const cubeMaterial = new THREE.MeshStandardMaterial({ color: cubeColors[i] });
             const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
-            // Position the cubes above the video screen in a horizontal line
-            const xPos = (i - 1.5) * 0.45; // Tighten the horizontal spacing
-            const yPos = 0.8; // Lower the height slightly
-            const zPos = -0.4; // Match the depth of the video screen
+            const xPos = (i - 1.5) * 0.45;
+            const yPos = 0.8;
+            const zPos = -0.4;
             cube.position.set(xPos, yPos, zPos);
             sceneParent.add(cube);
             buttonCubes.push(cube);
@@ -504,7 +493,7 @@
         const draggableObjects = [draggableCube];
         let selectedObject = null;
         let initialParentPosition = new THREE.Vector3();
-        initialCubePosition.copy(draggableCube.position); // Ensure initialCubePosition is set
+        initialCubePosition.copy(draggableCube.position);
 
         function getIntersections(controller) {
             const tempMatrix = new THREE.Matrix4();
@@ -524,7 +513,7 @@
 
                 if (object.userData.isButton) {
                     object.userData.select();
-                    return; // Do not allow dragging for buttons
+                    return;
                 }
 
                 object.material.emissive.setHex(0xaaaaaa);
@@ -532,7 +521,6 @@
                 controller.userData.selected = object;
                 selectedObject = object;
 
-                // Store the initial position of the parent scene and the cube
                 initialParentPosition.copy(sceneParent.position);
                 initialCubePosition.copy(draggableCube.position);
             }
@@ -549,7 +537,6 @@
                 scene.attach(object);
                 controller.userData.selected = undefined;
 
-                // Ensure the scene follows the cube exactly
                 if (object === draggableCube) {
                     const newCubePosition = draggableCube.position.clone();
                     sceneParent.position.copy(newCubePosition);
@@ -575,7 +562,6 @@
                 intersected.push(object);
                 line.scale.z = intersection.distance;
 
-                // Hover interactions for button cubes
                 if (object.userData.isButton) {
                     object.userData.hoverStart();
                 }
@@ -589,7 +575,6 @@
                 const object = intersected.pop();
                 object.material.emissive.setHex(0x000000);
 
-                // Hover end interactions for button cubes
                 if (object.userData.isButton) {
                     object.userData.hoverEnd();
                 }
@@ -632,7 +617,6 @@
             }
         }
 
-        // Add hover and select interaction to button cubes
         function addButtonCubeInteractions() {
             buttonCubes.forEach(cube => {
                 cube.userData.isButton = true;
@@ -659,11 +643,10 @@
             renderer.render(scene, camera);
         });
 
-        // Function to load and attach GLB model
         function loadAndAttachGLB(url, parent) {
             loader.load(url, function (gltf) {
                 const model = gltf.scene;
-                model.scale.set(0.5, 0.5, 0.5); // Adjust scale to fit within the larger cube
+                model.scale.set(0.5, 0.5, 0.5);
                 parent.add(model);
                 parent.userData.attachedGLB = model;
             }, undefined, function (error) {
@@ -671,7 +654,6 @@
             });
         }
 
-        // Function to toggle between models
         function toggleCubeModel(cube, url) {
             if (cube.userData.attachedGLB) {
                 cube.remove(cube.userData.attachedGLB);
@@ -680,42 +662,35 @@
             loadAndAttachGLB(url, cube);
         }
 
-        // Function to update the play/pause button state
         function updatePlayPauseButton() {
             toggleCubeModel(buttonCubes[0], isPaused ? 'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/btn-play-new.glb' : 'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/pause.glb');
         }
 
-        // Replace these URLs with the actual URLs of your GLB files
         const glbUrls = [
             'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/btn-play-new.glb',
             'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/restart.glb',
             'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/scale-up.glb',
             'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/FOH-high.glb',
-            'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/nav-sphere.glb' // For the draggable cube
+            'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/nav-sphere.glb'
         ];
 
-        // Adjust cube dimensions and make them transparent
         function adjustCubeDimensions(cube) {
-            cube.scale.set(1, 1, 1); // Adjust the cube dimensions
+            cube.scale.set(1, 1, 1);
             cube.material.transparent = true;
             cube.material.opacity = 0;
         }
 
-        // Attach GLB models to each button cube and adjust cube dimensions
         buttonCubes.forEach((cube, index) => {
             loadAndAttachGLB(glbUrls[index], cube);
             adjustCubeDimensions(cube);
         });
 
-        // Attach GLB model to the draggable cube and adjust cube dimensions
         loadAndAttachGLB(glbUrls[4], draggableCube);
         adjustCubeDimensions(draggableCube);
 
-        // Ensure the experience starts in the paused state
         isPaused = true;
         updatePlayPauseButton();
 
-        // Add event listeners for the buttons
         document.getElementById('playPauseButton').addEventListener('click', togglePlayPause);
         document.getElementById('resetButton').addEventListener('click', () => {
             stopExperience();
