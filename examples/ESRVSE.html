@@ -36,13 +36,16 @@
             top: 130px;
             left: 10px;
         }
+        .hidden {
+            display: none;
+        }
     </style>
 </head>
 <body>
-    <button id="playPauseButton">Play/Pause</button>
-    <button id="restartButton">Restart Experience</button>
-    <button id="scaleButton">Toggle Scale</button>
-    <button id="volumeButton">Toggle Volume</button>
+    <button id="playPauseButton" class="hidden">Play/Pause</button>
+    <button id="restartButton" class="hidden">Restart Experience</button>
+    <button id="scaleButton" class="hidden">Toggle Scale</button>
+    <button id="volumeButton" class="hidden">Toggle Volume</button>
     <script type="module">
         import * as THREE from 'three';
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -326,25 +329,8 @@
             video.pause();
             video.currentTime = 0;
 
-            // Hide play/pause button and show rotating restart button
-            document.getElementById('playPauseButton').style.display = 'none';
-            const restartButton = document.getElementById('restartButton');
-            restartButton.style.position = 'absolute';
-            restartButton.style.left = '50%';
-            restartButton.style.top = '50%';
-            restartButton.style.transform = 'translate(-50%, -50%)';
-            restartButton.style.display = 'block';
-            restartButton.style.animation = 'spin 2s linear infinite';
-
-            // Add CSS for rotating animation
-            const style = document.createElement('style');
-            style.innerHTML = `
-                @keyframes spin {
-                    0% { transform: translate(-50%, -50%) rotate(0deg); }
-                    100% { transform: translate(-50%, -50%) rotate(360deg); }
-                }
-            `;
-            document.head.appendChild(style);
+            // Hide play/pause button
+            document.getElementById('playPauseButton').classList.add('hidden');
         }
 
         function startExperience() {
@@ -373,14 +359,7 @@
         });
 
         document.getElementById('restartButton').addEventListener('click', () => {
-            document.getElementById('restartButton').style.display = 'none';
-            document.getElementById('playPauseButton').style.display = 'block';
-            document.getElementById('playPauseButton').style.top = '10px';
-            document.getElementById('playPauseButton').style.left = '10px';
-            document.getElementById('scaleButton').style.top = '50px';
-            document.getElementById('scaleButton').style.left = '10px';
-            document.getElementById('volumeButton').style.top = '90px';
-            document.getElementById('volumeButton').style.left = '10px';
+            document.getElementById('playPauseButton').classList.remove('hidden');
             stopExperience();
             startExperience();
         });
