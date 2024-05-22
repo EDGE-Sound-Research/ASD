@@ -81,29 +81,65 @@
             new THREE.PlaneGeometry(4, 2.25),
             new THREE.MeshStandardMaterial({ map: videoTexture, side: THREE.DoubleSide })
         );
-        videoScreen.position.set(0, .4, -.4);
+        videoScreen.position.set(0, 0.4, -0.4);
         videoScreen.rotation.y = Math.PI;
-        videoScreen.scale.set(-.3, .3, .3);
+        videoScreen.scale.set(-0.3, 0.3, 0.3);
 
         // Create a parent object that will be draggable
         const sceneParent = new THREE.Group();
         scene = new THREE.Scene();
         scene.add(sceneParent);
 
-        // Load the draggable GLB model
-        const glbLoader = new GLTFLoader();
-        const modelUrl = 'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/btn-play-scale10x.glb'; // Replace with your GLB model URL
-        let draggableModel;
+        // Initial position of the draggable cube
+        const initialCubePosition = new THREE.Vector3(0, 0, 0);
 
-        glbLoader.load(modelUrl, (gltf) => {
-            draggableModel = gltf.scene;
-            draggableModel.scale.set(0.1, 0.1, 0.1); // Adjust the scale as needed
-            sceneParent.add(draggableModel);
-            sceneParent.position.copy(initialModelPosition); // Set the sceneParent's initial position
+        // Placeholder for GLB models
+        const buttonCubes = [];
+        const glbModelUrl = 'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/btn-play-scale10x.glb';
+
+        const loader = new GLTFLoader();
+
+        function loadGLBModel(url, onLoad) {
+            loader.load(url, function (gltf) {
+                const model = gltf.scene;
+                model.scale.set(0.1, 0.1, 0.1); // Adjust scale if needed
+                model.traverse((child) => {
+                    if (child.isMesh) {
+                        child.userData.isButton = true;
+                        child.userData.hoverStart = () => onButtonCubeHoverStart(child);
+                        child.userData.hoverEnd = () => onButtonCubeHoverEnd(child);
+                        child.userData.select = () => onButtonCubeSelect(child);
+                    }
+                });
+                onLoad(model);
+            }, undefined, function (error) {
+                console.error('An error happened during the loading of the GLB:', error);
+            });
+        }
+
+        // Load GLB models for all buttons
+        for (let i = 0; i < 4; i++) {
+            loadGLBModel(glbModelUrl, (model) => {
+                const xPos = (i - 1.5) * 0.5; // Adjust the horizontal position
+                const yPos = 0.7; // Slightly above the video screen
+                const zPos = -0.4; // Match the depth of the video screen
+                model.position.set(xPos, yPos, zPos);
+                sceneParent.add(model);
+                buttonCubes.push(model);
+            });
+        }
+
+        // Load GLB model for the draggable cube
+        loadGLBModel(glbModelUrl, (model) => {
+            model.position.copy(initialCubePosition); // Set the initial position
+            model.traverse((child) => {
+                if (child.isMesh) {
+                    child.userData.isDraggable = true;
+                }
+            });
+            sceneParent.add(model);
+            buttonCubes.push(model); // Add the draggable model to the buttonCubes array for interaction
         });
-
-        // Initial position of the draggable model
-        const initialModelPosition = new THREE.Vector3(0, 0, 0);
 
         // Add the video screen to the sceneParent
         sceneParent.add(videoScreen);
@@ -159,7 +195,6 @@
         const modelIDs = ['1', '2', '3', '4', '5', '6', '7', 'basket1', 'basket2'];
         const audioLoader = new THREE.AudioLoader();
 
-        const loader = new GLTFLoader();
         loader.load('https://raw.githubusercontent.com/zpennachi/three.js/master/examples/nba-as-final.glb', function (gltf) {
             court = gltf.scene;
             court.scale.set(0.1, 0.1, 0.1);
@@ -199,6 +234,10 @@
                     }
                 }
             });
+
+            // Center the draggable cube in the court
+            initialCubePosition.copy(new THREE.Vector3(0, 0, 0)); // Ensure initialCubePosition is set
+            sceneParent.position.copy(initialCubePosition); // Ensure sceneParent starts at the same position
 
             isGLBLoaded = true;
             checkAllLoaded();
@@ -289,9 +328,8 @@
                 const offset = new THREE.Vector3(0, 1, -2);
                 offset.applyQuaternion(viewerRotation);
                 const spawnPoint = viewerPosition.clone().add(offset);
-                if (!draggableModel.position.equals(spawnPoint)) {
-                    draggableModel.position.copy(spawnPoint); // Apply offset to the draggable model
-                    sceneParent.position.copy(spawnPoint); // Ensure sceneParent is at the model's position
+                if (!sceneParent.position.equals(spawnPoint)) {
+                    sceneParent.position.copy(spawnPoint);
                 }
             }
             renderer.render(scene, camera);
@@ -434,37 +472,40 @@
 
         raycaster = new THREE.Raycaster();
 
-        // Add static cubes as buttons
-        const buttonCubes = [];
-        const cubeColors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00]; // Define colors for cubes
-
-        for (let i = 0; i < 4; i++) {
-            const cubeGeometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
-            const cubeMaterial = new THREE.MeshStandardMaterial({ color: cubeColors[i] });
-            const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
-            // Position the cubes above the video screen in a horizontal line
-            const xPos = (i - 1.5) * 0.5; // Adjust the horizontal position
-            const yPos = 0.7; // Slightly above the video screen
-            const zPos = -0.4; // Match the depth of the video screen
-            cube.position.set(xPos, yPos, zPos);
-            sceneParent.add(cube);
-            buttonCubes.push(cube);
-        }
-
-        const draggableObjects = [draggableModel];
+        const draggableObjects = buttonCubes;
         let selectedObject = null;
         let initialParentPosition = new THREE.Vector3();
-        initialModelPosition.copy(draggableModel.position); // Ensure initialModelPosition is set
+        initialCubePosition.copy(new THREE.Vector3(0, 0, 0)); // Ensure initialCubePosition is set
 
         function getIntersections(controller) {
             const tempMatrix = new THREE.Matrix4();
             tempMatrix.identity().extractRotation(controller.matrixWorld);
             raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
             raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
-            return raycaster.intersectObjects([...draggableObjects, ...buttonCubes], false);
+            return raycaster.intersectObjects(buttonCubes, true); // Intersect with buttonCubes
         }
 
-       function onSelectStart(event) {
+        function intersectObjects(controller) {
+            if (controller.userData.targetRayMode === 'screen') return;
+            if (controller.userData.selected !== undefined) return;
+
+            const line = controller.getObjectByName('line');
+            const intersections = getIntersections(controller);
+
+            if (intersections.length > 0) {
+                const intersection = intersections[0];
+                const object = intersection.object;
+                if (object.userData.hoverStart) {
+                    object.userData.hoverStart(); // Start hover
+                }
+                intersected.push(object);
+                line.scale.z = intersection.distance;
+            } else {
+                line.scale.z = 5;
+            }
+        }
+
+        function onSelectStart(event) {
             const controller = event.target;
             const intersections = getIntersections(controller);
 
@@ -482,9 +523,9 @@
                 controller.userData.selected = object;
                 selectedObject = object;
 
-                // Store the initial position of the parent scene and the model
+                // Store the initial position of the parent scene and the cube
                 initialParentPosition.copy(sceneParent.position);
-                initialModelPosition.copy(draggableModel.position);
+                initialCubePosition.copy(object.position);
             }
 
             controller.userData.targetRayMode = event.data.targetRayMode;
@@ -499,11 +540,11 @@
                 scene.attach(object);
                 controller.userData.selected = undefined;
 
-                // Ensure the scene follows the model exactly
-                if (object === draggableModel) {
-                    const newModelPosition = draggableModel.position.clone();
-                    sceneParent.position.copy(newModelPosition);
-                    initialModelPosition.copy(newModelPosition);
+                // Ensure the scene follows the cube exactly
+                if (object === selectedObject) {
+                    const newCubePosition = selectedObject.position.clone();
+                    sceneParent.position.copy(newCubePosition);
+                    initialCubePosition.copy(newCubePosition);
                     initialParentPosition.copy(sceneParent.position);
                 }
 
@@ -511,51 +552,33 @@
             }
         }
 
-        function intersectObjects(controller) {
-            if (controller.userData.targetRayMode === 'screen') return;
-            if (controller.userData.selected !== undefined) return;
-
-            const line = controller.getObjectByName('line');
-            const intersections = getIntersections(controller);
-
-            if (intersections.length > 0) {
-                const intersection = intersections[0];
-                const object = intersection.object;
-                object.material.emissive.setHex(0xff0000);
-                intersected.push(object);
-                line.scale.z = intersection.distance;
-
-                // Hover interactions for button cubes
-                if (object.userData.isButton) {
-                    object.userData.hoverStart();
-                }
-            } else {
-                line.scale.z = 5;
-            }
-        }
-
         function cleanIntersected() {
             while (intersected.length) {
                 const object = intersected.pop();
-                object.material.emissive.setHex(0x000000);
-
-                // Hover end interactions for button cubes
-                if (object.userData.isButton) {
-                    object.userData.hoverEnd();
+                if (object.userData.hoverEnd) {
+                    object.userData.hoverEnd(); // End hover
                 }
             }
         }
 
         function onButtonCubeHoverStart(cube) {
-            cube.material.emissive.setHex(0xff0000);
+            cube.traverse((child) => {
+                if (child.isMesh) {
+                    child.material.emissive.setHex(0xff0000);
+                }
+            });
         }
 
         function onButtonCubeHoverEnd(cube) {
-            cube.material.emissive.setHex(0x000000);
+            cube.traverse((child) => {
+                if (child.isMesh) {
+                    child.material.emissive.setHex(0x000000);
+                }
+            });
         }
 
         function onButtonCubeSelect(cube) {
-            const index = buttonCubes.indexOf(cube);
+            const index = buttonCubes.indexOf(cube.parent); // Ensure correct parent selection
             if (index === 0) {
                 toggleScale();
             } else if (index === 1) {
@@ -563,18 +586,6 @@
                 startExperience();
             }
         }
-
-        // Add hover and select interaction to button cubes
-        function addButtonCubeInteractions() {
-            buttonCubes.forEach(cube => {
-                cube.userData.isButton = true;
-                cube.userData.hoverStart = () => onButtonCubeHoverStart(cube);
-                cube.userData.hoverEnd = () => onButtonCubeHoverEnd(cube);
-                cube.userData.select = () => onButtonCubeSelect(cube);
-            });
-        }
-
-        addButtonCubeInteractions();
 
         renderer.setAnimationLoop(() => {
             const delta = clock.getDelta();
