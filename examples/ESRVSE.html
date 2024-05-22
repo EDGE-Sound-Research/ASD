@@ -511,17 +511,21 @@
 
                 if (object.userData.isButton) {
                     object.userData.select();
+                    console.log(`Button ${object.name} selected`);
                     return; // Do not allow dragging for buttons
                 }
 
-                object.material.emissive.setHex(0xaaaaaa);
-                controller.attach(object);
-                controller.userData.selected = object;
-                selectedObject = object;
+                if (object.userData.isDraggable) {
+                    object.material.emissive.setHex(0xaaaaaa);
+                    controller.attach(object);
+                    controller.userData.selected = object;
+                    selectedObject = object;
 
-                // Store the initial position of the parent scene and the cube
-                initialParentPosition.copy(sceneParent.position);
-                initialCubePosition.copy(object.position);
+                    // Store the initial position of the parent scene and the cube
+                    initialParentPosition.copy(sceneParent.position);
+                    initialCubePosition.copy(object.position);
+                    console.log('Object selected for dragging');
+                }
             }
 
             controller.userData.targetRayMode = event.data.targetRayMode;
@@ -542,6 +546,7 @@
                     sceneParent.position.copy(newCubePosition);
                     initialCubePosition.copy(newCubePosition);
                     initialParentPosition.copy(sceneParent.position);
+                    console.log('Object released from dragging');
                 }
 
                 selectedObject = null;
