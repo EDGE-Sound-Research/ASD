@@ -444,7 +444,7 @@
         const cubeColors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00]; // Define colors for cubes
 
         for (let i = 0; i < 4; i++) {
-            const cubeGeometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
+            const cubeGeometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
             const cubeMaterial = new THREE.MeshStandardMaterial({ color: cubeColors[i] });
             const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
             // Position the cubes above the video screen in a horizontal line
@@ -625,7 +625,7 @@
 
         function togglePlayPause() {
             if (isPaused) {
-                mixer._actions.forEach(action => action.play());
+                mixer._actions.forEach(action => action.paused = false);
                 audioSources.forEach(audio => {
                     if (!audio.isPlaying) {
                         audio.play();
@@ -648,12 +648,9 @@
         function loadAndAttachGLB(url, parent) {
             loader.load(url, function (gltf) {
                 const model = gltf.scene;
-                model.scale.set(0.1, 0.1, 0.1); // Adjust scale as needed
-                model.position.set(0, 0, 0); // Ensure the model is not stretched
-                const modelContainer = new THREE.Group();
-                modelContainer.add(model);
-                parent.add(modelContainer);
-                parent.userData.attachedGLB = modelContainer;
+                model.scale.set(0.5, 0.5, 0.5); // Adjust scale to fit within the cube
+                parent.add(model);
+                parent.userData.attachedGLB = model;
             }, undefined, function (error) {
                 console.error('An error happened during the loading of the GLB:', error);
             });
@@ -670,7 +667,7 @@
 
         // Adjust cube dimensions and make them transparent
         function adjustCubeDimensions(cube) {
-            cube.scale.set(3, 1, 1); // Adjust the horizontal scale as needed
+            cube.scale.set(2, 2, 2); // Adjust the cube dimensions
             cube.material.transparent = true;
             cube.material.opacity = 0;
         }
