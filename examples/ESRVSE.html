@@ -400,13 +400,14 @@
 }
 
         function toggleVolume() {
-            if (isLoud) {
-                nonSpatialAudio.setVolume(0.2);
-            } else {
-                nonSpatialAudio.setVolume(1);
-            }
-            isLoud = !isLoud;
-        }
+    if (isLoud) {
+        nonSpatialAudio.setVolume(0.2);
+    } else {
+        nonSpatialAudio.setVolume(1);
+    }
+    isLoud = !isLoud;
+    toggleCubeModel(buttonCubes[3], isLoud ? 'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/FOH-low.glb' : 'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/FOH-high.glb'); // Update the model for the volume button
+}
 
         function startButtonFunctionality() {
             document.querySelectorAll('.startButton').forEach(button => {
