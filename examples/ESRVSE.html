@@ -403,10 +403,10 @@
     if (isLoud) {
         nonSpatialAudio.setVolume(0.2);
     } else {
-        nonSpatialAudio.setVolume(1);
+        nonSpatialAudio.setVolume(.7);
     }
     isLoud = !isLoud;
-    toggleCubeModel(buttonCubes[3], isLoud ? 'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/FOH-low.glb' : 'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/FOH-high.glb'); // Update the model for the volume button
+    toggleCubeModel(buttonCubes[3], isLoud ? 'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/FOH-high.glb' : 'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/FOH-low.glb'); // Update the model for the volume button
 }
 
         function startButtonFunctionality() {
