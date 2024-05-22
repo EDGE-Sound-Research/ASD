@@ -41,7 +41,7 @@
 <body>
     <button id="scaleButton">Toggle Scale</button>
     <button id="resetButton">Reset Experience</button>
-    <button id="button3" disabled>Button 3</button>
+    <button id="button3">Play/Pause</button>
     <button id="button4" disabled>Button 4</button>
     <script type="module">
         import * as THREE from 'three';
@@ -60,6 +60,7 @@
         const clock = new THREE.Clock();
         let experienceTimer;
         const totalDuration = 120;
+        let isPaused = false;
 
         let isGLBLoaded = false;
         let isVideoLoaded = false;
@@ -260,7 +261,7 @@
         function animate() {
             renderer.setAnimationLoop(() => {
                 const delta = clock.getDelta();
-                if (mixer) {
+                if (!isPaused && mixer) {
                     mixer.update(delta);
                 }
                 if (video && video.readyState >= video.HAVE_CURRENT_DATA) {
@@ -353,6 +354,10 @@
         document.getElementById('resetButton').addEventListener('click', () => {
             stopExperience();
             startExperience();
+        });
+
+        document.getElementById('button3').addEventListener('click', () => {
+            togglePlayPause();
         });
 
         function startButtonFunctionality() {
@@ -575,6 +580,8 @@
             } else if (index === 1) {
                 stopExperience();
                 startExperience();
+            } else if (index === 2) {
+                togglePlayPause();
             }
         }
 
@@ -592,7 +599,7 @@
 
         renderer.setAnimationLoop(() => {
             const delta = clock.getDelta();
-            if (mixer) {
+            if (!isPaused && mixer) {
                 mixer.update(delta);
             }
             if (video.readyState >= video.HAVE_CURRENT_DATA) {
@@ -616,11 +623,33 @@
             isScaledUp = !isScaledUp;
         }
 
+        function togglePlayPause() {
+            if (isPaused) {
+                mixer._actions.forEach(action => action.play());
+                audioSources.forEach(audio => {
+                    if (!audio.isPlaying) {
+                        audio.play();
+                    }
+                });
+                video.play();
+            } else {
+                mixer._actions.forEach(action => action.paused = true);
+                audioSources.forEach(audio => {
+                    if (audio.isPlaying) {
+                        audio.pause();
+                    }
+                });
+                video.pause();
+            }
+            isPaused = !isPaused;
+        }
+
         // Function to load and attach GLB model
         function loadAndAttachGLB(url, parent) {
             loader.load(url, function (gltf) {
                 const model = gltf.scene;
                 model.scale.set(0.1, 0.1, 0.1); // Adjust scale as needed
+                model.position.set(0, 0, 0); // Ensure the model is not stretched
                 parent.add(model);
                 parent.userData.attachedGLB = model;
             }, undefined, function (error) {
