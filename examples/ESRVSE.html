@@ -650,8 +650,10 @@
                 const model = gltf.scene;
                 model.scale.set(0.1, 0.1, 0.1); // Adjust scale as needed
                 model.position.set(0, 0, 0); // Ensure the model is not stretched
-                parent.add(model);
-                parent.userData.attachedGLB = model;
+                const modelContainer = new THREE.Group();
+                modelContainer.add(model);
+                parent.add(modelContainer);
+                parent.userData.attachedGLB = modelContainer;
             }, undefined, function (error) {
                 console.error('An error happened during the loading of the GLB:', error);
             });
