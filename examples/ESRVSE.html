@@ -361,7 +361,8 @@
         }
 
         document.getElementById('scaleButton').addEventListener('click', () => {
-            toggleScale();
+            stopExperience();
+            startExperience();
         });
 
         document.getElementById('resetButton').addEventListener('click', () => {
@@ -593,12 +594,13 @@
         function onButtonCubeSelect(cube) {
             const index = buttonCubes.indexOf(cube);
             if (index === 0) {
-                toggleScale();
+                stopExperience();
+                startExperience();
             } else if (index === 1) {
                 stopExperience();
                 startExperience();
             } else if (index === 2) {
-                togglePlayPause();
+                toggleScale();
             } else if (index === 3) {
                 toggleVolume();
             }
