@@ -339,12 +339,8 @@
             }
 
             audioSources.forEach(audio => {
-                if (!audio.isPlaying) {
-                    audio.play();
-                } else {
-                    audio.stop();
-                    audio.play();
-                }
+                audio.stop();
+                audio.play();
             });
 
             video.play();
