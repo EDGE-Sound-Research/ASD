@@ -464,23 +464,22 @@
 
         raycaster = new THREE.Raycaster();
 
-        // Add static cubes as buttons
-        const buttonCubes = [];
-        const cubeColors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00]; // Define colors for cubes
+// Add static cubes as buttons
+const buttonCubes = [];
+const cubeColors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00]; // Define colors for cubes
 
-        for (let i = 0; i < 4; i++) {
-            const cubeGeometry = new THREE.BoxGeometry(0.1, 0.1, 0.1); // Adjusted size
-            const cubeMaterial = new THREE.MeshStandardMaterial({ color: cubeColors[i] });
-            const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
-            // Position the cubes above the video screen in a horizontal line
-            const xPos = (i - 1.5) * 0.5; // Adjust the horizontal position
-            const yPos = 0.9; // Slightly above the video screen
-            const zPos = -0.4; // Match the depth of the video screen
-            cube.position.set(xPos, yPos, zPos);
-            sceneParent.add(cube);
-            buttonCubes.push(cube);
-        }
-
+for (let i = 0; i < 4; i++) {
+    const cubeGeometry = new THREE.BoxGeometry(0.13, 0.13, 0.13); // Adjusted size (30% larger than 0.1)
+    const cubeMaterial = new THREE.MeshStandardMaterial({ color: cubeColors[i] });
+    const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
+    // Position the cubes above the video screen in a horizontal line
+    const xPos = (i - 1.5) * 0.35; // Adjust the horizontal position to be closer together
+    const yPos = 1.0; // Adjust the vertical position slightly above the video screen
+    const zPos = -0.4; // Match the depth of the video screen
+    cube.position.set(xPos, yPos, zPos);
+    sceneParent.add(cube);
+    buttonCubes.push(cube);
+}
         const draggableObjects = [draggableCube];
         let selectedObject = null;
         let initialParentPosition = new THREE.Vector3();
@@ -683,17 +682,17 @@
             toggleCubeModel(buttonCubes[3], isLoud ? 'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/FOH-high.glb' : 'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/FOH-low.glb'); // Update the model for the volume button
         }
 
-        // Function to load and attach GLB model
-        function loadAndAttachGLB(url, parent) {
-            loader.load(url, function (gltf) {
-                const model = gltf.scene;
-                model.scale.set(0.25, 0.25, 0.25); // Adjust scale to fit within the smaller cube
-                parent.add(model);
-                parent.userData.attachedGLB = model;
-            }, undefined, function (error) {
-                console.error('An error happened during the loading of the GLB:', error);
-            });
-        }
+    // Function to load and attach GLB model
+function loadAndAttachGLB(url, parent) {
+    loader.load(url, function (gltf) {
+        const model = gltf.scene;
+        model.scale.set(0.325, 0.325, 0.325); // Adjust scale to fit within the slightly larger cube
+        parent.add(model);
+        parent.userData.attachedGLB = model;
+    }, undefined, function (error) {
+        console.error('An error happened during the loading of the GLB:', error);
+    });
+}
 
         // Function to toggle between models
         function toggleCubeModel(cube, url) {
