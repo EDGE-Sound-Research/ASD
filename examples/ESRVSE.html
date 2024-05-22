@@ -390,13 +390,14 @@
         }
 
         function toggleScale() {
-            if (isScaledUp) {
-                sceneParent.scale.set(0.1, 0.1, 0.1);
-            } else {
-                sceneParent.scale.set(1, 1, 1);
-            }
-            isScaledUp = !isScaledUp;
-        }
+    if (isScaledUp) {
+        sceneParent.scale.set(0.1, 0.1, 0.1); // Scale down to original size
+    } else {
+        sceneParent.scale.set(1, 1, 1); // Scale up
+    }
+    isScaledUp = !isScaledUp;
+    toggleCubeModel(buttonCubes[2], isScaledUp ? 'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/scale-down.glb' : 'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/scale-up.glb'); // Update the model for the scale button
+}
 
         function toggleVolume() {
             if (isLoud) {
