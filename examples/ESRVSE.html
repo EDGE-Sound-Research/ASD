@@ -80,12 +80,12 @@
         videoTexture.format = THREE.RGBAFormat;
 
         const videoScreen = new THREE.Mesh(
-            new THREE.PlaneGeometry(4, 2.25),
-            new THREE.MeshStandardMaterial({ map: videoTexture, side: THREE.DoubleSide })
-        );
-        videoScreen.position.set(0, .4, -.4);
-        videoScreen.rotation.y = Math.PI;
-        videoScreen.scale.set(-.3, .3, .3);
+    new THREE.PlaneGeometry(4, 2.25),
+    new THREE.MeshBasicMaterial({ map: videoTexture, side: THREE.DoubleSide })
+);
+videoScreen.position.set(0, .4, -.4);
+videoScreen.rotation.y = Math.PI;
+videoScreen.scale.set(-.3, .3, .3);
 
         // Create a parent object that will be draggable
         const sceneParent = new THREE.Group();
