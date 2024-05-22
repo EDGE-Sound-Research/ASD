@@ -42,7 +42,7 @@
     <button id="scaleButton">Toggle Scale</button>
     <button id="resetButton">Reset Experience</button>
     <button id="button3">Play/Pause</button>
-    <button id="button4" disabled>Button 4</button>
+    <button id="button4">Toggle Volume</button>
     <script type="module">
         import * as THREE from 'three';
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -60,12 +60,13 @@
         const clock = new THREE.Clock();
         let experienceTimer;
         const totalDuration = 120;
-        let isPaused = false;
+        let isPaused = true; // Ensure the experience loads paused
 
         let isGLBLoaded = false;
         let isVideoLoaded = false;
         let allAudioLoaded = false;
         let audioLoadedCount = 0;
+        let isLoud = true; // Initial volume state
 
         const video = document.createElement('video');
         video.crossOrigin = "anonymous";
@@ -165,7 +166,9 @@
 
             mixer = new THREE.AnimationMixer(court);
             gltf.animations.forEach((clip) => {
-                mixer.clipAction(clip).play();
+                const action = mixer.clipAction(clip);
+                action.paused = true; // Ensure the animations start paused
+                action.play();
             });
 
             court.traverse((child) => {
@@ -212,7 +215,7 @@
         const nonSpatialAudioLoader = new THREE.AudioLoader();
         nonSpatialAudioLoader.load(nonSpatialAudioUrl, (buffer) => {
             nonSpatialAudio.setBuffer(buffer);
-            nonSpatialAudio.setVolume(1);
+            nonSpatialAudio.setVolume(1); // Set initial volume to loud
             listener.add(nonSpatialAudio);
             audioSources.push(nonSpatialAudio);
         });
@@ -329,10 +332,8 @@
             experienceTimer = setTimeout(stopExperience, totalDuration * 1000);
 
             if (mixer) {
-                mixer.stopAllAction();
-                mixer.update(0);
                 mixer._actions.forEach(action => {
-                    action.reset();
+                    action.paused = false;
                     action.play();
                 });
             }
@@ -347,6 +348,7 @@
             });
 
             video.play();
+            isPaused = false;
             animate();
         }
 
@@ -361,6 +363,10 @@
 
         document.getElementById('button3').addEventListener('click', () => {
             togglePlayPause();
+        });
+
+        document.getElementById('button4').addEventListener('click', () => {
+            toggleVolume();
         });
 
         function startButtonFunctionality() {
@@ -585,6 +591,8 @@
                 startExperience();
             } else if (index === 2) {
                 togglePlayPause();
+            } else if (index === 3) {
+                toggleVolume();
             }
         }
 
@@ -647,6 +655,15 @@
             isPaused = !isPaused;
         }
 
+        function toggleVolume() {
+            if (isLoud) {
+                nonSpatialAudio.setVolume(0.2); // Set to soft volume
+            } else {
+                nonSpatialAudio.setVolume(1); // Set to loud volume
+            }
+            isLoud = !isLoud;
+        }
+
         // Function to load and attach GLB model
         function loadAndAttachGLB(url, parent) {
             loader.load(url, function (gltf) {
@@ -661,11 +678,11 @@
 
         // Replace these URLs with the actual URLs of your GLB files
         const glbUrls = [
-            'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/btn-play-new.glb',
+            'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/play.glb',
             'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/restart.glb',
             'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/scale.glb',
-            'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/btn-play-new.glb',
-            'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/btn-play-new.glb' // For the draggable cube
+            'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/play.glb',
+            'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/play.glb' // For the draggable cube
         ];
 
         // Adjust cube dimensions and make them transparent
