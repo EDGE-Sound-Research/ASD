@@ -531,7 +531,7 @@
             if (intersections.length > 0) {
                 const intersection = intersections[0];
                 const object = intersection.object;
-                object.material.emissive.setHex(0xff0000);
+                object.userData.hoverStart(); // Start hover
                 intersected.push(object);
                 line.scale.z = intersection.distance;
 
@@ -547,7 +547,7 @@
         function cleanIntersected() {
             while (intersected.length) {
                 const object = intersected.pop();
-                object.material.emissive.setHex(0x000000);
+                object.userData.hoverEnd(); // End hover
 
                 // Hover end interactions for button cubes
                 if (object.userData.isButton) {
@@ -557,11 +557,19 @@
         }
 
         function onButtonCubeHoverStart(cube) {
-            cube.material.emissive.setHex(0xff0000);
+            cube.traverse((child) => {
+                if (child.isMesh) {
+                    child.material.emissive.setHex(0xff0000);
+                }
+            });
         }
 
         function onButtonCubeHoverEnd(cube) {
-            cube.material.emissive.setHex(0x000000);
+            cube.traverse((child) => {
+                if (child.isMesh) {
+                    child.material.emissive.setHex(0x000000);
+                }
+            });
         }
 
         function onButtonCubeSelect(cube) {
