@@ -28,11 +28,11 @@
             top: 50px;
             left: 10px;
         }
-        #button3 {
+        #playPauseButton {
             top: 90px;
             left: 10px;
         }
-        #button4 {
+        #toggleVolumeButton {
             top: 130px;
             left: 10px;
         }
@@ -41,8 +41,8 @@
 <body>
     <button id="scaleButton">Toggle Scale</button>
     <button id="resetButton">Reset Experience</button>
-    <button id="button3">Play/Pause</button>
-    <button id="button4">Toggle Volume</button>
+    <button id="playPauseButton">Play/Pause</button>
+    <button id="toggleVolumeButton">Toggle Volume</button>
     <script type="module">
         import * as THREE from 'three';
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -325,6 +325,7 @@
             });
             video.pause();
             video.currentTime = 0;
+            disablePlayPauseButton();
         }
 
         function startExperience() {
@@ -346,10 +347,22 @@
             video.play();
             isPaused = false;
             animate();
+            enablePlayPauseButton();
+        }
+
+        function enablePlayPauseButton() {
+            const playPauseButton = document.getElementById('playPauseButton');
+            playPauseButton.disabled = false;
+        }
+
+        function disablePlayPauseButton() {
+            const playPauseButton = document.getElementById('playPauseButton');
+            playPauseButton.disabled = true;
         }
 
         document.getElementById('scaleButton').addEventListener('click', () => {
-            toggleScale();
+            stopExperience();
+            startExperience();
         });
 
         document.getElementById('resetButton').addEventListener('click', () => {
@@ -357,11 +370,11 @@
             startExperience();
         });
 
-        document.getElementById('button3').addEventListener('click', () => {
+        document.getElementById('playPauseButton').addEventListener('click', () => {
             togglePlayPause();
         });
 
-        document.getElementById('button4').addEventListener('click', () => {
+        document.getElementById('toggleVolumeButton').addEventListener('click', () => {
             toggleVolume();
         });
 
@@ -581,12 +594,13 @@
         function onButtonCubeSelect(cube) {
             const index = buttonCubes.indexOf(cube);
             if (index === 0) {
-                toggleScale();
+                stopExperience();
+                startExperience();
             } else if (index === 1) {
                 stopExperience();
                 startExperience();
             } else if (index === 2) {
-                togglePlayPause();
+                toggleScale();
             } else if (index === 3) {
                 toggleVolume();
             }
