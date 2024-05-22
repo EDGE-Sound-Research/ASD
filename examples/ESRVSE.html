@@ -106,9 +106,7 @@
                 model.traverse((child) => {
                     if (child.isMesh) {
                         child.userData.isButton = true;
-                        child.userData.hoverStart = () => onButtonCubeHoverStart(child);
-                        child.userData.hoverEnd = () => onButtonCubeHoverEnd(child);
-                        child.userData.select = () => onButtonCubeSelect(child);
+                        child.userData.isDraggable = true;
                     }
                 });
                 onLoad(model);
@@ -132,7 +130,6 @@
         // Load GLB model for the draggable cube
         loadGLBModel(glbModelUrl, (model) => {
             model.position.copy(initialCubePosition); // Set the initial position
-            model.userData.isDraggable = true;
             sceneParent.add(model);
             buttonCubes.push(model); // Add the draggable model to the buttonCubes array for interaction
         });
@@ -491,8 +488,8 @@
             if (intersections.length > 0) {
                 const intersection = intersections[0];
                 const object = intersection.object;
-                if (object.userData.hoverStart) {
-                    object.userData.hoverStart(); // Start hover
+                if (object.userData.isButton) {
+                    onButtonCubeHoverStart(object);
                 }
                 intersected.push(object);
                 line.scale.z = intersection.distance;
@@ -510,8 +507,7 @@
                 const object = intersection.object;
 
                 if (object.userData.isButton) {
-                    object.userData.select();
-                    console.log(`Button ${object.name} selected`);
+                    onButtonCubeSelect(object);
                     return; // Do not allow dragging for buttons
                 }
 
@@ -524,7 +520,6 @@
                     // Store the initial position of the parent scene and the cube
                     initialParentPosition.copy(sceneParent.position);
                     initialCubePosition.copy(object.position);
-                    console.log('Object selected for dragging');
                 }
             }
 
@@ -546,7 +541,6 @@
                     sceneParent.position.copy(newCubePosition);
                     initialCubePosition.copy(newCubePosition);
                     initialParentPosition.copy(sceneParent.position);
-                    console.log('Object released from dragging');
                 }
 
                 selectedObject = null;
@@ -556,8 +550,8 @@
         function cleanIntersected() {
             while (intersected.length) {
                 const object = intersected.pop();
-                if (object.userData.hoverEnd) {
-                    object.userData.hoverEnd(); // End hover
+                if (object.userData.isButton) {
+                    onButtonCubeHoverEnd(object);
                 }
             }
         }
@@ -579,7 +573,7 @@
         }
 
         function onButtonCubeSelect(cube) {
-            const index = buttonCubes.indexOf(cube.parent); // Ensure correct parent selection
+            const index = buttonCubes.indexOf(cube);
             if (index === 0) {
                 toggleScale();
             } else if (index === 1) {
