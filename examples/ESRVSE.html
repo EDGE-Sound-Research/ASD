@@ -81,9 +81,9 @@
             new THREE.PlaneGeometry(4, 2.25),
             new THREE.MeshStandardMaterial({ map: videoTexture, side: THREE.DoubleSide })
         );
-        videoScreen.position.set(0, .4, -.4);
+        videoScreen.position.set(0, 0.4, -0.4);
         videoScreen.rotation.y = Math.PI;
-        videoScreen.scale.set(-.3, .3, .3);
+        videoScreen.scale.set(-0.3, 0.3, 0.3);
 
         // Create a parent object that will be draggable
         const sceneParent = new THREE.Group();
@@ -97,8 +97,9 @@
         const buttonCubes = [];
         const glbModelUrl = 'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/btn-play-scale10x.glb';
 
+        const loader = new GLTFLoader();
+
         function loadGLBModel(url, onLoad) {
-            const loader = new GLTFLoader();
             loader.load(url, function (gltf) {
                 const model = gltf.scene;
                 model.scale.set(0.1, 0.1, 0.1); // Adjust scale if needed
@@ -128,6 +129,9 @@
             buttonCubes.push(model); // Add the draggable model to the buttonCubes array for interaction
             addButtonCubeInteractions();
         });
+
+        // Add the video screen to the sceneParent
+        sceneParent.add(videoScreen);
 
         renderer = new THREE.WebGLRenderer({ alpha: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
@@ -180,7 +184,6 @@
         const modelIDs = ['1', '2', '3', '4', '5', '6', '7', 'basket1', 'basket2'];
         const audioLoader = new THREE.AudioLoader();
 
-        const loader = new GLTFLoader();
         loader.load('https://raw.githubusercontent.com/zpennachi/three.js/master/examples/nba-as-final.glb', function (gltf) {
             court = gltf.scene;
             court.scale.set(0.1, 0.1, 0.1);
