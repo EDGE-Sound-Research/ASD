@@ -325,7 +325,9 @@
             });
             video.pause();
             video.currentTime = 0;
-            disablePlayPauseButton();
+            isPaused = true; // Ensure the experience is paused when stopped
+            enablePlayPauseButton(); // Re-enable the play/pause button
+            enableResetButton(); // Enable the reset button
         }
 
         function startExperience() {
@@ -358,6 +360,11 @@
         function disablePlayPauseButton() {
             const playPauseButton = document.getElementById('playPauseButton');
             playPauseButton.disabled = true;
+        }
+
+        function enableResetButton() {
+            const resetButton = document.getElementById('resetButton');
+            resetButton.disabled = false;
         }
 
         document.getElementById('scaleButton').addEventListener('click', () => {
@@ -594,10 +601,12 @@
         function onButtonCubeSelect(cube) {
             const index = buttonCubes.indexOf(cube);
             if (index === 0) {
-                stopExperience();
-                startExperience();
+			 togglePlayPause();
+
             } else if (index === 1) {
-            togglePlayPause();
+				    stopExperience();
+                startExperience();
+
             } else if (index === 2) {
                 toggleScale();
             } else if (index === 3) {
