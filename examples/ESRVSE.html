@@ -1,132 +1,123 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AR Experience</title>
-    <script type="importmap">
-        {
-            "imports": {
-                "three": "../build/three.module.min.js",
-                "three/addons/": "./jsm/"
-            }
-        }
-    </script>
-    <style>
-        button {
-            position: fixed;
-            z-index: 1;
-            padding: 10px;
-            font-size: 16px;
-            cursor: pointer;
-        }
-        #scaleButton {
-            top: 10px;
-            left: 10px;
-        }
-        #resetButton {
-            top: 50px;
-            left: 10px;
-        }
-        #button3 {
-            top: 90px;
-            left: 10px;
-        }
-        #button4 {
-            top: 130px;
-            left: 10px;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AR Experience</title>
+<script type="importmap">
+{
+  "imports": {
+    "three": "../build/three.module.min.js",
+    "three/addons/": "./jsm/"
+  }
+}
+</script>
+<style>
+  button {
+    position: fixed;
+    z-index: 1;
+    padding: 10px;
+    font-size: 16px;
+    cursor: pointer;
+  }
+  #scaleButton {
+    top: 10px;
+    left: 10px;
+  }
+  #resetButton {
+    top: 50px;
+    left: 10px;
+  }
+  #button3 {
+    top: 90px;
+    left: 10px;
+  }
+  #button4 {
+    top: 130px;
+    left: 10px;
+  }
+</style>
 </head>
 <body>
-    <button id="scaleButton">Toggle Scale</button>
-    <button id="resetButton">Reset Experience</button>
-    <button id="button3" disabled>Button 3</button>
-    <button id="button4" disabled>Button 4</button>
-    <script type="module">
-        import * as THREE from 'three';
-        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-        import { XRButton } from 'three/addons/webxr/XRButton.js';
-        import { XRHandModelFactory } from 'three/addons/webxr/XRHandModelFactory.js';
-        import { XRControllerModelFactory } from 'three/addons/webxr/XRControllerModelFactory.js';
+<button id="scaleButton">Toggle Scale</button>
+<button id="resetButton">Reset Experience</button>
+<button id="button3" disabled>Button 3</button>
+<button id="button4" disabled>Button 4</button>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { XRButton } from 'three/addons/webxr/XRButton.js';
+import { XRHandModelFactory } from 'three/addons/webxr/XRHandModelFactory.js';
+import { XRControllerModelFactory } from 'three/addons/webxr/XRControllerModelFactory.js';
 
-        let camera, scene, renderer;
-        let controller1, controller2;
-        let controllerGrip1, controllerGrip2;
-        let raycaster;
-        const intersected = [];
-        let court, mixer;
-        const audioSources = [];
-        const clock = new THREE.Clock();
-        let experienceTimer;
-        const totalDuration = 120;
+let camera, scene, renderer;
+let controller1, controller2;
+let controllerGrip1, controllerGrip2;
+let raycaster;
+const intersected = [];
+let court, mixer;
+const audioSources = [];
+const clock = new THREE.Clock();
+let experienceTimer;
+const totalDuration = 120;
+let isGLBLoaded = false;
+let isVideoLoaded = false;
+let allAudioLoaded = false;
+let audioLoadedCount = 0;
 
-        let isGLBLoaded = false;
-        let isVideoLoaded = false;
-        let allAudioLoaded = false;
-        let audioLoadedCount = 0;
+const video = document.createElement('video');
+video.crossOrigin = "anonymous";
+video.preload = 'auto';
+video.load();
+video.muted = true;
+const videoTexture = new THREE.VideoTexture(video);
+videoTexture.minFilter = THREE.LinearFilter;
+videoTexture.magFilter = THREE.LinearFilter;
+videoTexture.format = THREE.RGBAFormat;
 
-        const video = document.createElement('video');
-        video.crossOrigin = "anonymous";
-        video.preload = 'auto';
-        video.load();
-        video.muted = true;
+const videoScreen = new THREE.Mesh(
+  new THREE.PlaneGeometry(4, 2.25),
+  new THREE.MeshStandardMaterial({ map: videoTexture, side: THREE.DoubleSide })
+);
+videoScreen.position.set(0, 0.4, -0.4);
+videoScreen.rotation.y = Math.PI;
+videoScreen.scale.set(-0.3, 0.3, 0.3);
 
-        const videoTexture = new THREE.VideoTexture(video);
-        videoTexture.minFilter = THREE.LinearFilter;
-        videoTexture.magFilter = THREE.LinearFilter;
-        videoTexture.format = THREE.RGBAFormat;
+const sceneParent = new THREE.Group();
+scene = new THREE.Scene();
+scene.add(sceneParent);
 
-        const videoScreen = new THREE.Mesh(
-            new THREE.PlaneGeometry(4, 2.25),
-            new THREE.MeshStandardMaterial({ map: videoTexture, side: THREE.DoubleSide })
-        );
-        videoScreen.position.set(0, 0.4, -0.4);
-        videoScreen.rotation.y = Math.PI;
-        videoScreen.scale.set(-0.3, 0.3, 0.3);
+const initialCubePosition = new THREE.Vector3(0, 0, 0);
+const buttonCubes = [];
+const glbModelUrl = 'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/btn-play-scale10x.glb';
+const loader = new GLTFLoader();
 
-        // Create a parent object that will be draggable
-        const sceneParent = new THREE.Group();
-        scene = new THREE.Scene();
-        scene.add(sceneParent);
+function loadGLBModel(url, onLoad) {
+  loader.load(url, function (gltf) {
+    const model = gltf.scene;
+    model.scale.set(0.1, 0.1, 0.1);
+    model.traverse((child) => {
+      if (child.isMesh) {
+        child.userData.isButton = true;
+        child.userData.isDraggable = true;
+      }
+    });
+    onLoad(model);
+  }, undefined, function (error) {
+    console.error('An error happened during the loading of the GLB:', error);
+  });
+}
 
-        // Initial position of the draggable cube
-        const initialCubePosition = new THREE.Vector3(0, 0, 0);
-
-        // Placeholder for GLB models
-        const buttonCubes = [];
-        const glbModelUrl = 'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/btn-play-scale10x.glb';
-
-        const loader = new GLTFLoader();
-
-        function loadGLBModel(url, onLoad) {
-            loader.load(url, function (gltf) {
-                const model = gltf.scene;
-                model.scale.set(0.1, 0.1, 0.1); // Adjust scale if needed
-                model.traverse((child) => {
-                    if (child.isMesh) {
-                        child.userData.isButton = true;
-                        child.userData.isDraggable = true;
-                    }
-                });
-                onLoad(model);
-            }, undefined, function (error) {
-                console.error('An error happened during the loading of the GLB:', error);
-            });
-        }
-
-        // Load GLB models for all buttons
 for (let i = 0; i < 4; i++) {
   loadGLBModel(glbModelUrl, (model) => {
-    const xPos = (i - 1.5) * 0.5; // Adjust the horizontal position
-    const yPos = 0.7; // Slightly above the video screen
-    const zPos = -0.4; // Match the depth of the video screen
+    const xPos = (i - 1.5) * 0.5;
+    const yPos = 0.7;
+    const zPos = -0.4;
     model.position.set(xPos, yPos, zPos);
 
-    // Create a box3 hitbox
     const box = new THREE.Box3().setFromObject(model);
     const hitbox = new THREE.Box3Helper(box, 0xffff00);
-    hitbox.visible = false; // Hide hitbox for normal use, show for debugging
+    hitbox.visible = false;
     hitbox.userData = {
       isButton: true,
       select: () => onButtonCubeSelect(model)
@@ -137,14 +128,12 @@ for (let i = 0; i < 4; i++) {
   });
 }
 
-// Load GLB model for the draggable cube
 loadGLBModel(glbModelUrl, (model) => {
   model.position.copy(initialCubePosition);
 
-  // Create a box3 hitbox
   const box = new THREE.Box3().setFromObject(model);
   const hitbox = new THREE.Box3Helper(box, 0x00ff00);
-  hitbox.visible = false; // Hide hitbox for normal use, show for debugging
+  hitbox.visible = false;
   hitbox.userData = {
     isDraggable: true
   };
@@ -153,344 +142,324 @@ loadGLBModel(glbModelUrl, (model) => {
   buttonCubes.push({ model, hitbox });
 });
 
+sceneParent.add(videoScreen);
 
-        // Add the video screen to the sceneParent
-        sceneParent.add(videoScreen);
+renderer = new THREE.WebGLRenderer({ alpha: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
 
-        renderer = new THREE.WebGLRenderer({ alpha: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        document.body.appendChild(renderer.domElement);
+const listener = new THREE.AudioListener();
+camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 1000);
+renderer.xr.setReferenceSpaceType('local-floor');
+renderer.xr.enabled = true;
+document.body.appendChild(XRButton.createButton(renderer, { requiredFeatures: ['hit-test', 'hand-tracking'] }));
+scene.background = null;
 
-        const listener = new THREE.AudioListener();
-        camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 1000);
-        renderer.xr.setReferenceSpaceType('local-floor');
-        renderer.xr.enabled = true;
-        document.body.appendChild(XRButton.createButton(renderer, { requiredFeatures: ['hit-test', 'hand-tracking'] }));
-        scene.background = null;
+const initialCameraPosition = new THREE.Vector3(0, 2, 6);
+const initialCameraRotation = new THREE.Euler(0, THREE.MathUtils.degToRad(0), 0);
+camera.position.copy(initialCameraPosition);
+camera.rotation.copy(initialCameraRotation);
+camera.updateProjectionMatrix();
+camera.add(listener);
 
-        const initialCameraPosition = new THREE.Vector3(0, 2, 6);
-        const initialCameraRotation = new THREE.Euler(0, THREE.MathUtils.degToRad(0), 0);
-        camera.position.copy(initialCameraPosition);
-        camera.rotation.copy(initialCameraRotation);
-        camera.updateProjectionMatrix();
-        camera.add(listener);
+function preloadVideo(url) {
+  const req = new XMLHttpRequest();
+  req.open('GET', url, true);
+  req.responseType = 'blob';
+  req.onload = function () {
+    if (this.status === 200) {
+      var videoBlob = this.response;
+      var vid = URL.createObjectURL(videoBlob);
+      video.src = vid;
+      console.log('Video preloaded!');
+    }
+  };
+  req.onerror = function () {
+    console.log('Error on preloading video.');
+  };
+  req.send();
+}
 
-        function preloadVideo(url) {
-            const req = new XMLHttpRequest();
-            req.open('GET', url, true);
-            req.responseType = 'blob';
-            req.onload = function () {
-                if (this.status === 200) {
-                    var videoBlob = this.response;
-                    var vid = URL.createObjectURL(videoBlob);
-                    video.src = vid;
-                    console.log('Video preloaded!');
-                }
-            };
-            req.onerror = function () {
-                console.log('Error on preloading video.');
-            };
-            req.send();
-        }
+preloadVideo('https://dl.dropboxusercontent.com/scl/fi/9upajrftohbrvahzpli5i/NBA_AllStar_Demo_Clip-compress.mp4?rlkey=jceoyzehubnlrku5v0puv0bf6&st=9yhuvs3v&dl=1');
 
-        preloadVideo('https://dl.dropboxusercontent.com/scl/fi/9upajrftohbrvahzpli5i/NBA_AllStar_Demo_Clip-compress.mp4?rlkey=jceoyzehubnlrku5v0puv0bf6&st=9yhuvs3v&dl=1');
-        const audioUrls = [
-            'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/Ball_Stem.mp3',
-            'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/Player1_Stem.mp3',
-            'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/Player2_Stem.mp3',
-            'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/Player3_Stem.mp3',
-            'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/Player4_Stem.mp3',
-            'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/Player5_Stem.mp3',
-            'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/Player6_Stem.mp3',
-            'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/NetL_Stem.mp3',
-            'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/NetR_Stem.mp3'
-        ];
-        const modelIDs = ['1', '2', '3', '4', '5', '6', '7', 'basket1', 'basket2'];
-        const audioLoader = new THREE.AudioLoader();
-
-        loader.load('https://raw.githubusercontent.com/zpennachi/three.js/master/examples/nba-as-final.glb', function (gltf) {
-            court = gltf.scene;
-            court.scale.set(0.1, 0.1, 0.1);
-            court.position.set(0, 0, 0);
-            sceneParent.add(court);
-
-            mixer = new THREE.AnimationMixer(court);
-            gltf.animations.forEach((clip) => {
-                mixer.clipAction(clip).play();
-            });
-
-            court.traverse((child) => {
-                if (child.isMesh && child.material) {
-                    // Keep the original material for the court plane
-                    if (child.name === 'courtPlane') {
-                        child.material = new THREE.MeshStandardMaterial({ map: videoTexture });
-                    }
-
-                    const index = modelIDs.indexOf(child.name);
-                    if (index !== -1) {
-                        audioLoader.load(audioUrls[index], (buffer) => {
-                            const audio = new THREE.PositionalAudio(listener);
-                            audio.setBuffer(buffer);
-                            audio.setRefDistance(1);
-                            audio.setDistanceModel('exponential');
-                            audio.setRolloffFactor(2.5);
-                            child.add(audio);
-                            audioSources.push(audio);
-                            audioLoadedCount++;
-                            if (audioLoadedCount === audioUrls.length) {
-                                allAudioLoaded = true;
-                                checkAllLoaded();
-                            }
-                        }, undefined, function (error) {
-                            console.error(`Error loading audio for model ${child.name}:`, error);
-                        });
-                    }
-                }
-            });
-
-            // Center the draggable cube in the court
-            initialCubePosition.copy(new THREE.Vector3(0, 0, 0)); // Ensure initialCubePosition is set
-            sceneParent.position.copy(initialCubePosition); // Ensure sceneParent starts at the same position
-
-            isGLBLoaded = true;
+const audioUrls = [
+  'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/Ball_Stem.mp3',
+  'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/Player1_Stem.mp3',
+  'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/Player2_Stem.mp3',
+  'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/Player3_Stem.mp3',
+  'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/Player4_Stem.mp3',
+  'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/Player5_Stem.mp3',
+  'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/Player6_Stem.mp3',
+  'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/NetL_Stem.mp3',
+  'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/NetR_Stem.mp3'
+];
+const modelIDs = ['1', '2', '3', '4', '5', '6', '7', 'basket1', 'basket2'];
+const audioLoader = new THREE.AudioLoader();
+loader.load('https://raw.githubusercontent.com/zpennachi/three.js/master/examples/nba-as-final.glb', function (gltf) {
+  court = gltf.scene;
+  court.scale.set(0.1, 0.1, 0.1);
+  court.position.set(0, 0, 0);
+  sceneParent.add(court);
+  mixer = new THREE.AnimationMixer(court);
+  gltf.animations.forEach((clip) => {
+    mixer.clipAction(clip).play();
+  });
+  court.traverse((child) => {
+    if (child.isMesh && child.material) {
+      if (child.name === 'courtPlane') {
+        child.material = new THREE.MeshStandardMaterial({ map: videoTexture });
+      }
+      const index = modelIDs.indexOf(child.name);
+      if (index !== -1) {
+        audioLoader.load(audioUrls[index], (buffer) => {
+          const audio = new THREE.PositionalAudio(listener);
+          audio.setBuffer(buffer);
+          audio.setRefDistance(1);
+          audio.setDistanceModel('exponential');
+          audio.setRolloffFactor(2.5);
+          child.add(audio);
+          audioSources.push(audio);
+          audioLoadedCount++;
+          if (audioLoadedCount === audioUrls.length) {
+            allAudioLoaded = true;
             checkAllLoaded();
+          }
         }, undefined, function (error) {
-            console.error('An error happened during the loading of the GLB:', error);
+          console.error(`Error loading audio for model ${child.name}:`, error);
         });
+      }
+    }
+  });
+  initialCubePosition.copy(new THREE.Vector3(0, 0, 0));
+  sceneParent.position.copy(initialCubePosition);
+  isGLBLoaded = true;
+  checkAllLoaded();
+}, undefined, function (error) {
+  console.error('An error happened during the loading of the GLB:', error);
+});
 
-        const nonSpatialAudioUrl = 'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/AllStar_Game_FOH.mp3';
-        const nonSpatialAudio = new THREE.Audio(listener);
-        const nonSpatialAudioLoader = new THREE.AudioLoader();
-        nonSpatialAudioLoader.load(nonSpatialAudioUrl, (buffer) => {
-            nonSpatialAudio.setBuffer(buffer);
-            nonSpatialAudio.setVolume(1);
-            listener.add(nonSpatialAudio);
-            audioSources.push(nonSpatialAudio);
-        });
+const nonSpatialAudioUrl = 'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/AllStar_Game_FOH.mp3';
+const nonSpatialAudio = new THREE.Audio(listener);
+const nonSpatialAudioLoader = new THREE.AudioLoader();
+nonSpatialAudioLoader.load(nonSpatialAudioUrl, (buffer) => {
+  nonSpatialAudio.setBuffer(buffer);
+  nonSpatialAudio.setVolume(1);
+  listener.add(nonSpatialAudio);
+  audioSources.push(nonSpatialAudio);
+});
 
-        const ambientLight = new THREE.AmbientLight(0xffffff, 1);
-        scene.add(ambientLight);
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-        directionalLight.position.set(0, 20, 10);
-        scene.add(directionalLight);
+const ambientLight = new THREE.AmbientLight(0xffffff, 1);
+scene.add(ambientLight);
 
-        function checkAllLoaded() {
-            console.log(`GLB Loaded: ${isGLBLoaded}, Video Loaded: ${isVideoLoaded}, All Audio Loaded: ${allAudioLoaded}`);
-            if (isGLBLoaded && isVideoLoaded && allAudioLoaded) {
-                const scaleButton = document.getElementById('scaleButton');
-                if (scaleButton) {
-                    scaleButton.disabled = false;
-                    console.log("Scale Button enabled.");
-                } else {
-                    console.log("Scale Button not found!");
-                }
-                console.log("All assets loaded. Ready to start!");
-            }
+const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+directionalLight.position.set(0, 20, 10);
+scene.add(directionalLight);
+
+function checkAllLoaded() {
+  console.log(`GLB Loaded: ${isGLBLoaded}, Video Loaded: ${isVideoLoaded}, All Audio Loaded: ${allAudioLoaded}`);
+  if (isGLBLoaded && isVideoLoaded && allAudioLoaded) {
+    const scaleButton = document.getElementById('scaleButton');
+    if (scaleButton) {
+      scaleButton.disabled = false;
+      console.log("Scale Button enabled.");
+    } else {
+      console.log("Scale Button not found!");
+    }
+    console.log("All assets loaded. Ready to start!");
+  }
+}
+
+video.addEventListener('canplaythrough', () => {
+  isVideoLoaded = true;
+  checkAllLoaded();
+});
+if (video.readyState >= 4) {
+  isVideoLoaded = true;
+  checkAllLoaded();
+}
+
+function disposeObject(obj) {
+  if (obj.geometry) obj.geometry.dispose();
+  if (obj.material) {
+    if (Array.isArray(obj.material)) {
+      obj.material.forEach(material => material.dispose());
+    } else {
+      obj.material.dispose();
+    }
+  }
+  if (obj.texture) obj.texture.dispose();
+}
+
+function animate() {
+  renderer.setAnimationLoop(() => {
+    const delta = clock.getDelta();
+    if (mixer) {
+      mixer.update(delta);
+    }
+    if (video && video.readyState >= video.HAVE_CURRENT_DATA) {
+      videoTexture.needsUpdate = true;
+    }
+    cleanIntersected();
+    intersectObjects(controller1);
+    intersectObjects(controller2);
+    renderer.render(scene, camera);
+  });
+}
+
+function onSessionStarted(session) {
+  session.requestReferenceSpace('local').then(function (referenceSpace) {
+    renderer.xr.setReferenceSpace(referenceSpace);
+    session.requestAnimationFrame(onAnimationFrame);
+  });
+}
+
+function onAnimationFrame(time, frame) {
+  const referenceSpace = renderer.xr.getReferenceSpace();
+  const viewerPose = frame.getViewerPose(referenceSpace);
+  if (viewerPose) {
+    const viewerPosition = new THREE.Vector3().fromArray(viewerPose.transform.position);
+    const viewerRotation = new THREE.Quaternion().fromArray(viewerPose.transform.orientation);
+    const offset = new THREE.Vector3(0, 1, -2);
+    offset.applyQuaternion(viewerRotation);
+    const spawnPoint = viewerPosition.clone().add(offset);
+    if (!sceneParent.position.equals(spawnPoint)) {
+      sceneParent.position.copy(spawnPoint);
+    }
+  }
+  renderer.render(scene, camera);
+  frame.session.requestAnimationFrame(onAnimationFrame);
+}
+
+renderer.xr.addEventListener('sessionstart', onSessionStarted);
+
+function onWindowResize() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+function stopExperience() {
+  if (mixer) {
+    mixer.stopAllAction();
+    mixer._actions.forEach(action => {
+      action.stop();
+      action.reset();
+    });
+  }
+  audioSources.forEach(audio => {
+    if (audio.isPlaying) {
+      audio.stop();
+    }
+  });
+  video.pause();
+  video.currentTime = 0;
+}
+
+function startExperience() {
+  clearTimeout(experienceTimer);
+  experienceTimer = setTimeout(stopExperience, totalDuration * 1000);
+  if (mixer) {
+    mixer.stopAllAction();
+    mixer.update(0);
+    mixer._actions.forEach(action => {
+      action.reset();
+      action.play();
+    });
+  }
+  audioSources.forEach(audio => {
+    if (!audio.isPlaying) {
+      audio.play();
+    }
+  });
+  video.play();
+  animate();
+}
+
+document.getElementById('scaleButton').addEventListener('click', () => {
+  toggleScale();
+});
+document.getElementById('resetButton').addEventListener('click', () => {
+  stopExperience();
+  startExperience();
+});
+
+function startButtonFunctionality() {
+  document.querySelectorAll('.startButton').forEach(button => {
+    button.style.display = 'none';
+  });
+  const audioContext = THREE.AudioContext.getContext();
+  if (audioContext.state === 'suspended') {
+    audioContext.resume().then(() => {
+      console.log("Audio Context resumed successfully!");
+      audioSources.forEach(audio => {
+        if (!audio.isPlaying) {
+          audio.play();
         }
+      });
+      video.play();
+    }).catch(error => {
+      console.error("Error resuming audio context:", error);
+    });
+  } else {
+    audioSources.forEach(audio => {
+      if (!audio.isPlaying) {
+        audio.play();
+      }
+    });
+    video.play();
+  }
+  startExperience();
+}
 
-        video.addEventListener('canplaythrough', () => {
-            isVideoLoaded = true;
-            checkAllLoaded();
-        });
-        if (video.readyState >= 4) {
-            isVideoLoaded = true;
-            checkAllLoaded();
-        }
+document.getElementById('scaleButton').addEventListener('click', startButtonFunctionality);
 
-        function disposeObject(obj) {
-            if (obj.geometry) obj.geometry.dispose();
-            if (obj.material) {
-                if (Array.isArray(obj.material)) {
-                    obj.material.forEach(material => material.dispose());
-                } else {
-                    obj.material.dispose();
-                }
-            }
-            if (obj.texture) obj.texture.dispose();
-        }
+document.addEventListener('visibilitychange', function () {
+  if (document.hidden) {
+    stopExperience();
+  }
+});
 
-        function animate() {
-            renderer.setAnimationLoop(() => {
-                const delta = clock.getDelta();
-                if (mixer) {
-                    mixer.update(delta);
-                }
-                if (video && video.readyState >= video.HAVE_CURRENT_DATA) {
-                    videoTexture.needsUpdate = true;
-                }
-                cleanIntersected();
-                intersectObjects(controller1);
-                intersectObjects(controller2);
-                renderer.render(scene, camera);
-            });
-        }
+window.addEventListener('resize', onWindowResize, false);
 
-        function onSessionStarted(session) {
-            session.requestReferenceSpace('local').then(function (referenceSpace) {
-                renderer.xr.setReferenceSpace(referenceSpace);
-                session.requestAnimationFrame(onAnimationFrame);
-            });
-        }
+// Hand and controller setup
+const controllerModelFactory = new XRControllerModelFactory();
+controller1 = renderer.xr.getController(0);
+controller1.addEventListener('selectstart', onSelectStart);
+controller1.addEventListener('selectend', onSelectEnd);
+scene.add(controller1);
 
-        function onAnimationFrame(time, frame) {
-            const referenceSpace = renderer.xr.getReferenceSpace();
-            const viewerPose = frame.getViewerPose(referenceSpace);
-            if (viewerPose) {
-                const viewerPosition = new THREE.Vector3().fromArray(viewerPose.transform.position);
-                const viewerRotation = new THREE.Quaternion().fromArray(viewerPose.transform.orientation);
-                const offset = new THREE.Vector3(0, 1, -2);
-                offset.applyQuaternion(viewerRotation);
-                const spawnPoint = viewerPosition.clone().add(offset);
-                if (!sceneParent.position.equals(spawnPoint)) {
-                    sceneParent.position.copy(spawnPoint);
-                }
-            }
-            renderer.render(scene, camera);
-            frame.session.requestAnimationFrame(onAnimationFrame);
-        }
+controller2 = renderer.xr.getController(1);
+controller2.addEventListener('selectstart', onSelectStart);
+controller2.addEventListener('selectend', onSelectEnd);
+scene.add(controller2);
 
-        renderer.xr.addEventListener('sessionstart', onSessionStarted);
+controllerGrip1 = renderer.xr.getControllerGrip(0);
+controllerGrip1.add(controllerModelFactory.createControllerModel(controllerGrip1));
+scene.add(controllerGrip1);
 
-        function onWindowResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        }
+controllerGrip2 = renderer.xr.getControllerGrip(1);
+controllerGrip2.add(controllerModelFactory.createControllerModel(controllerGrip2));
+scene.add(controllerGrip2);
 
-        function stopExperience() {
-            if (mixer) {
-                mixer.stopAllAction();
-                mixer._actions.forEach(action => {
-                    action.stop();
-                    action.reset();
-                });
-            }
-            audioSources.forEach(audio => {
-                if (audio.isPlaying) {
-                    audio.stop();
-                }
-            });
-            video.pause();
-            video.currentTime = 0;
-        }
+const handModelFactory = new XRHandModelFactory();
+const hand1 = renderer.xr.getHand(0);
+hand1.add(handModelFactory.createHandModel(hand1));
+scene.add(hand1);
 
-        function startExperience() {
-            clearTimeout(experienceTimer);
-            experienceTimer = setTimeout(stopExperience, totalDuration * 1000);
+const hand2 = renderer.xr.getHand(1);
+hand2.add(handModelFactory.createHandModel(hand2));
+scene.add(hand2);
 
-            if (mixer) {
-                mixer.stopAllAction();
-                mixer.update(0);
-                mixer._actions.forEach(action => {
-                    action.reset();
-                    action.play();
-                });
-            }
+const geometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -1)]);
+const line = new THREE.Line(geometry);
+line.name = 'line';
+line.scale.z = 5;
+controller1.add(line.clone());
+controller2.add(line.clone());
 
-            audioSources.forEach(audio => {
-                if (!audio.isPlaying) {
-                    audio.play();
-                }
-            });
+raycaster = new THREE.Raycaster();
 
-            video.play();
-            animate();
-        }
-
-        document.getElementById('scaleButton').addEventListener('click', () => {
-            toggleScale();
-        });
-
-        document.getElementById('resetButton').addEventListener('click', () => {
-            stopExperience();
-            startExperience();
-        });
-
-        function startButtonFunctionality() {
-            document.querySelectorAll('.startButton').forEach(button => {
-                button.style.display = 'none';
-            });
-
-            const audioContext = THREE.AudioContext.getContext();
-            if (audioContext.state === 'suspended') {
-                audioContext.resume().then(() => {
-                    console.log("Audio Context resumed successfully!");
-                    audioSources.forEach(audio => {
-                        if (!audio.isPlaying) {
-                            audio.play();
-                        }
-                    });
-                    video.play();
-                }).catch(error => {
-                    console.error("Error resuming audio context:", error);
-                });
-            } else {
-                audioSources.forEach(audio => {
-                    if (!audio.isPlaying) {
-                        audio.play();
-                    }
-                });
-                video.play();
-            }
-
-            startExperience();
-        }
-
-        document.getElementById('scaleButton').addEventListener('click', startButtonFunctionality);
-
-        document.addEventListener('visibilitychange', function () {
-            if (document.hidden) {
-                stopExperience();
-            }
-        });
-
-        window.addEventListener('resize', onWindowResize, false);
-
-        // Hand and controller setup
-        const controllerModelFactory = new XRControllerModelFactory();
-        controller1 = renderer.xr.getController(0);
-        controller1.addEventListener('selectstart', onSelectStart);
-        controller1.addEventListener('selectend', onSelectEnd);
-        scene.add(controller1);
-
-        controller2 = renderer.xr.getController(1);
-        controller2.addEventListener('selectstart', onSelectStart);
-        controller2.addEventListener('selectend', onSelectEnd);
-        scene.add(controller2);
-
-        controllerGrip1 = renderer.xr.getControllerGrip(0);
-        controllerGrip1.add(controllerModelFactory.createControllerModel(controllerGrip1));
-        scene.add(controllerGrip1);
-
-        controllerGrip2 = renderer.xr.getControllerGrip(1);
-        controllerGrip2.add(controllerModelFactory.createControllerModel(controllerGrip2));
-        scene.add(controllerGrip2);
-
-        const handModelFactory = new XRHandModelFactory();
-        const hand1 = renderer.xr.getHand(0);
-        hand1.add(handModelFactory.createHandModel(hand1));
-        scene.add(hand1);
-
-        const hand2 = renderer.xr.getHand(1);
-        hand2.add(handModelFactory.createHandModel(hand2));
-        scene.add(hand2);
-
-        const geometry2 = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -1)]);
-        const line = new THREE.Line(geometry2);
-        line.name = 'line';
-        line.scale.z = 5;
-
-        controller1.add(line.clone());
-        controller2.add(line.clone());
-
-        raycaster = new THREE.Raycaster();
-
-        const draggableObjects = buttonCubes;
-        let selectedObject = null;
-        let initialParentPosition = new THREE.Vector3();
-        initialCubePosition.copy(new THREE.Vector3(0, 0, 0)); // Ensure initialCubePosition is set
-
-       function getIntersections(controller) {
+function getIntersections(controller) {
   const tempMatrix = new THREE.Matrix4();
   tempMatrix.identity().extractRotation(controller.matrixWorld);
   raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
@@ -499,7 +468,7 @@ loadGLBModel(glbModelUrl, (model) => {
   const intersects = [];
   buttonCubes.forEach(({ model, hitbox }) => {
     if (raycaster.ray.intersectsBox(hitbox.box)) {
-      intersects.push({ object: model });
+      intersects.push({ object: model, distance: raycaster.ray.origin.distanceTo(hitbox.box.getCenter(new THREE.Vector3())) });
     }
   });
   return intersects;
@@ -517,122 +486,109 @@ function intersectObjects(controller) {
       onButtonCubeHoverStart(object);
     }
     intersected.push(object);
-    line.scale.z = intersection.distance;
+    line.scale.z = intersection.distance; // Adjust the raycaster line length
   } else {
-    line.scale.z = 5;
+    line.scale.z = 5; // Default length when no intersection
   }
 }
 
+function onSelectStart(event) {
+  const controller = event.target;
+  const intersections = getIntersections(controller);
+  if (intersections.length > 0) {
+    const intersection = intersections[0];
+    const object = intersection.object;
+    if (object.userData.isButton) {
+      object.userData.select();
+      return; // Do not allow dragging for buttons
+    }
+    if (object.userData.isDraggable) {
+      object.material.emissive.setHex(0xaaaaaa);
+      controller.attach(object);
+      controller.userData.selected = object;
+      selectedObject = object;
+      initialParentPosition.copy(sceneParent.position);
+      initialCubePosition.copy(object.position);
+    }
+  }
+  controller.userData.targetRayMode = event.data.targetRayMode;
+}
 
-        function onSelectStart(event) {
-            const controller = event.target;
-            const intersections = getIntersections(controller);
+function onSelectEnd(event) {
+  const controller = event.target;
+  if (controller.userData.selected !== undefined) {
+    const object = controller.userData.selected;
+    object.material.emissive.setHex(0x000000);
+    scene.attach(object);
+    controller.userData.selected = undefined;
+    if (object.userData.isDraggable) {
+      const newCubePosition = object.position.clone();
+      sceneParent.position.copy(newCubePosition);
+      initialCubePosition.copy(newCubePosition);
+      initialParentPosition.copy(sceneParent.position);
+    }
+    selectedObject = null;
+  }
+}
 
-            if (intersections.length > 0) {
-                const intersection = intersections[0];
-                const object = intersection.object;
+function cleanIntersected() {
+  while (intersected.length) {
+    const object = intersected.pop();
+    if (object.userData.isButton) {
+      onButtonCubeHoverEnd(object);
+    }
+  }
+}
 
-                if (object.userData.isButton) {
-                    object.userData.select();
-                    return; // Do not allow dragging for buttons
-                }
+function onButtonCubeHoverStart(cube) {
+  cube.traverse((child) => {
+    if (child.isMesh) {
+      child.material.emissive.setHex(0xff0000);
+    }
+  });
+}
 
-                if (object.userData.isDraggable) {
-                    object.material.emissive.setHex(0xaaaaaa);
-                    controller.attach(object);
-                    controller.userData.selected = object;
-                    selectedObject = object;
+function onButtonCubeHoverEnd(cube) {
+  cube.traverse((child) => {
+    if (child.isMesh) {
+      child.material.emissive.setHex(0x000000);
+    }
+  });
+}
 
-                    // Store the initial position of the parent scene and the cube
-                    initialParentPosition.copy(sceneParent.position);
-                    initialCubePosition.copy(object.position);
-                }
-            }
+function onButtonCubeSelect(cube) {
+  const index = buttonCubes.findIndex(({ model }) => model === cube);
+  if (index === 0) {
+    toggleScale();
+  } else if (index === 1) {
+    stopExperience();
+    startExperience();
+  }
+}
 
-            controller.userData.targetRayMode = event.data.targetRayMode;
-        }
+renderer.setAnimationLoop(() => {
+  const delta = clock.getDelta();
+  if (mixer) {
+    mixer.update(delta);
+  }
+  if (video.readyState >= video.HAVE_CURRENT_DATA) {
+    videoTexture.needsUpdate = true;
+  }
+  cleanIntersected();
+  intersectObjects(controller1);
+  intersectObjects(controller2);
+  renderer.render(scene, camera);
+});
 
-        function onSelectEnd(event) {
-            const controller = event.target;
-
-            if (controller.userData.selected !== undefined) {
-                const object = controller.userData.selected;
-                object.material.emissive.setHex(0x000000);
-                scene.attach(object);
-                controller.userData.selected = undefined;
-
-                // Ensure the scene follows the cube exactly
-                if (object.userData.isDraggable) {
-                    const newCubePosition = object.position.clone();
-                    sceneParent.position.copy(newCubePosition);
-                    initialCubePosition.copy(newCubePosition);
-                    initialParentPosition.copy(sceneParent.position);
-                }
-
-                selectedObject = null;
-            }
-        }
-
-        function cleanIntersected() {
-            while (intersected.length) {
-                const object = intersected.pop();
-                if (object.userData.isButton) {
-                    onButtonCubeHoverEnd(object);
-                }
-            }
-        }
-
-        function onButtonCubeHoverStart(cube) {
-            cube.traverse((child) => {
-                if (child.isMesh) {
-                    child.material.emissive.setHex(0xff0000);
-                }
-            });
-        }
-
-        function onButtonCubeHoverEnd(cube) {
-            cube.traverse((child) => {
-                if (child.isMesh) {
-                    child.material.emissive.setHex(0x000000);
-                }
-            });
-        }
-
-        function onButtonCubeSelect(cube) {
-            const index = buttonCubes.indexOf(cube);
-            if (index === 0) {
-                toggleScale();
-            } else if (index === 1) {
-                stopExperience();
-                startExperience();
-            }
-        }
-
-        renderer.setAnimationLoop(() => {
-            const delta = clock.getDelta();
-            if (mixer) {
-                mixer.update(delta);
-            }
-            if (video.readyState >= video.HAVE_CURRENT_DATA) {
-                videoTexture.needsUpdate = true;
-            }
-            cleanIntersected();
-            intersectObjects(controller1);
-            intersectObjects(controller2);
-
-            renderer.render(scene, camera);
-        });
-
-        let isScaledUp = false;
-
-        function toggleScale() {
-            if (isScaledUp) {
-                sceneParent.scale.set(1, 1, 1);
-            } else {
-                sceneParent.scale.set(10, 10, 10);
-            }
-            isScaledUp = !isScaledUp;
-        }
-    </script>
+let isScaledUp = false;
+function toggleScale() {
+  if (isScaledUp) {
+    sceneParent.scale.set(1, 1, 1);
+  } else {
+    sceneParent.scale.set(10, 10, 10);
+  }
+  isScaledUp = !isScaledUp;
+}
+</script>
 </body>
 </html>
