@@ -607,6 +607,7 @@ function loadAndAttachGLB(url, parent) {
         const model = gltf.scene;
         model.scale.set(0.1, 0.1, 0.1); // Adjust scale as needed
         parent.add(model);
+		parent.userData.attachedGLB = model;
     }, undefined, function (error) {
         console.error('An error happened during the loading of the GLB:', error);
     });
@@ -620,14 +621,67 @@ const glbUrls = [
     'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/play.glb',
     'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/play.glb' // For the draggable cube
 ];
+// Adjust cube dimensions and make them transparent
+function adjustCubeDimensions(cube) {
+    cube.scale.set(3, 1, 1); // Adjust the horizontal scale as needed
+    cube.material.transparent = true;
+    cube.material.opacity = 0;
+}
 
-// Attach GLB models to each button cube
+// Attach GLB models to each button cube and adjust cube dimensions
 buttonCubes.forEach((cube, index) => {
-    loadAndAttachGLB(glbUrls[index], cube);
+    loadAndAttachGLB(glbPaths[index], cube);
+    adjustCubeDimensions(cube);
 });
 
-// Attach GLB model to the draggable cube
-loadAndAttachGLB(glbUrls[4], draggableCube);
+// Attach GLB model to the draggable cube and adjust cube dimensions
+loadAndAttachGLB(glbPaths[4], draggableCube);
+adjustCubeDimensions(draggableCube);
+
+// Update hover and select interaction functions
+function onButtonCubeHoverStart(cube) {
+    cube.material.emissive.setHex(0xff0000);
+    if (cube.userData.attachedGLB) {
+        cube.userData.attachedGLB.traverse((child) => {
+            if (child.isMesh) {
+                child.material.emissive.setHex(0xff0000);
+            }
+        });
+    }
+}
+
+function onButtonCubeHoverEnd(cube) {
+    cube.material.emissive.setHex(0x000000);
+    if (cube.userData.attachedGLB) {
+        cube.userData.attachedGLB.traverse((child) => {
+            if (child.isMesh) {
+                child.material.emissive.setHex(0x000000);
+            }
+        });
+    }
+}
+
+function onButtonCubeSelect(cube) {
+    const index = buttonCubes.indexOf(cube);
+    if (index === 0) {
+        toggleScale();
+    } else if (index === 1) {
+        stopExperience();
+        startExperience();
+    }
+}
+
+// Ensure to add user data properties to cubes for hover and select interactions
+function addButtonCubeInteractions() {
+    buttonCubes.forEach(cube => {
+        cube.userData.isButton = true;
+        cube.userData.hoverStart = () => onButtonCubeHoverStart(cube);
+        cube.userData.hoverEnd = () => onButtonCubeHoverEnd(cube);
+        cube.userData.select = () => onButtonCubeSelect(cube);
+    });
+}
+
+addButtonCubeInteractions();
     </script>
 </body>
 </html>
