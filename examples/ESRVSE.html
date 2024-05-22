@@ -474,7 +474,7 @@
             const cubeMaterial = new THREE.MeshStandardMaterial({ color: cubeColors[i] });
             const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
             // Position the cubes above the video screen in a horizontal line
-            const xPos = (i - 1.5) * 0.25; // Tighten the horizontal spacing
+            const xPos = (i - 1.5) * 0.45; // Tighten the horizontal spacing
             const yPos = 0.8; // Lower the height slightly
             const zPos = -0.4; // Match the depth of the video screen
             cube.position.set(xPos, yPos, zPos);
