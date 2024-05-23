@@ -110,7 +110,7 @@
         camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 1000);
         renderer.xr.setReferenceSpaceType('local-floor');
         renderer.xr.enabled = true;
-        document.body.appendChild(XRButton.createButton(renderer, { requiredFeatures: ['hit-test','depth-sensing'] }));
+        document.body.appendChild(XRButton.createButton(renderer, { requiredFeatures: ['hit-test'] }));
         scene.background = null;
 
         const initialCameraPosition = new THREE.Vector3(0, 2, 6);
