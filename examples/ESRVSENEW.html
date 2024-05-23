@@ -456,17 +456,22 @@
         const buttonCubes = [];
         const cubeColors = [0xff0000, 0x00ff00, 0x0000ff]; // Reduced to 3 colors
 
-        for (let i = 0; i < 3; i++) {
-            const cubeGeometry = new THREE.BoxGeometry(0.65, 0.65, 0.65);
-            const cubeMaterial = new THREE.MeshStandardMaterial({ color: cubeColors[i] });
-            const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
-            const xPos = (i - 1.0) * 0.65;
-            const yPos = 0.8;
-            const zPos = -0.4;
-            cube.position.set(xPos, yPos, zPos);
-            sceneParent.add(cube);
-            buttonCubes.push(cube);
-        }
+for (let i = 0; i < 3; i++) {
+    const cubeGeometry = new THREE.BoxGeometry(0.65, 0.65, 0.65);
+    const cubeMaterial = new THREE.MeshStandardMaterial({ 
+        color: cubeColors[i],
+        transparent: true, // Enable transparency
+        opacity: 0 // Set opacity to 0 to make them invisible
+    });
+    const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
+    const xPos = (i - 1.0) * 0.65;
+    const yPos = 0.8;
+    const zPos = -0.4;
+    cube.position.set(xPos, yPos, zPos);
+    sceneParent.add(cube);
+    buttonCubes.push(cube);
+}
+
 
         const draggableObjects = [draggableCube];
         let selectedObject = null;
