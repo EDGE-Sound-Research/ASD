@@ -643,11 +643,22 @@
         }
 
         const glbUrls = [
-            'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/btn-play-new.glb',
-            'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/restart.glb',
-            'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/FOH-high.glb',
-            'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/nav-sphere.glb'
-        ];
+    'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/btn-play-new.glb',
+    'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/restart.glb',
+    'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/FOH-high.glb'
+];
+
+		// Load nav-sphere for draggable object if needed
+loadAndAttachGLB('https://raw.githubusercontent.com/zpennachi/three.js/master/examples/nav-sphere.glb', draggableCube);
+adjustCubeDimensions(draggableCube);
+
+buttonCubes.forEach((cube, index) => {
+    if (index < glbUrls.length) { // Only load GLBs for available URLs
+        loadAndAttachGLB(glbUrls[index], cube);
+        adjustCubeDimensions(cube);
+    }
+});
+
 
         function adjustCubeDimensions(cube) {
             cube.scale.set(1, 1, 1);
