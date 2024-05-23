@@ -646,18 +646,22 @@
     'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/btn-play-new.glb',
     'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/restart.glb',
     'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/FOH-high.glb'
+    // No GLB for the fourth cube, ensuring nothing appears in that position
 ];
 
-		// Load nav-sphere for draggable object if needed
+buttonCubes.forEach((cube, index) => {
+    if (index < glbUrls.length) {
+        loadAndAttachGLB(glbUrls[index], cube);
+        adjustCubeDimensions(cube);
+    } else {
+        sceneParent.remove(cube); // Remove the fourth cube so nothing appears in that position
+    }
+});
+
+// Load nav-sphere for draggable object if needed
 loadAndAttachGLB('https://raw.githubusercontent.com/zpennachi/three.js/master/examples/nav-sphere.glb', draggableCube);
 adjustCubeDimensions(draggableCube);
 
-buttonCubes.forEach((cube, index) => {
-    if (index < glbUrls.length) { // Only load GLBs for available URLs
-        loadAndAttachGLB(glbUrls[index], cube);
-        adjustCubeDimensions(cube);
-    }
-});
 
 
         function adjustCubeDimensions(cube) {
