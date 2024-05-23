@@ -457,10 +457,10 @@
         const cubeColors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00];
 
         for (let i = 0; i < 4; i++) {
-            const cubeGeometry = new THREE.BoxGeometry(0.4, 0.4, 0.4);
+            const cubeGeometry = new THREE.BoxGeometry(0.65, 0.65, 0.65);
             const cubeMaterial = new THREE.MeshStandardMaterial({ color: cubeColors[i] });
             const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
-            const xPos = (i - 1.5) * 0.45;
+            const xPos = (i - 1.5) * 0.65;
             const yPos = 0.8;
             const zPos = -0.4;
             cube.position.set(xPos, yPos, zPos);
@@ -622,7 +622,7 @@
         function loadAndAttachGLB(url, parent) {
             loader.load(url, function (gltf) {
                 const model = gltf.scene;
-                model.scale.set(0.5, 0.5, 0.5);
+                model.scale.set(0.65, 0.65, 0.65);
                 parent.add(model);
                 parent.userData.attachedGLB = model;
             }, undefined, function (error) {
