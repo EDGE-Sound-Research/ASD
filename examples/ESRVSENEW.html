@@ -16,25 +16,30 @@
         button {
             position: fixed;
             z-index: 1;
-            padding: 15px; /* Increased padding for scaling */
-            font-size: 18px; /* Increased font size for scaling */
+            padding: 10px;
+            font-size: 16px;
             cursor: pointer;
+            display: none; /* Hide all buttons initially */
         }
         #resetButton {
-            top: 10px;
+            top: 50px;
             left: 10px;
+            display: block; /* Show the reset button */
         }
         #playPauseButton {
-            top: 70px;
+            top: 90px;
             left: 10px;
+            display: block; /* Show the play/pause button */
         }
         #toggleVolumeButton {
             top: 130px;
             left: 10px;
+            display: block; /* Show the toggle volume button */
         }
     </style>
 </head>
 <body>
+    <button id="scaleButton" style="display: none;">Toggle Scale</button>
     <button id="resetButton">Reset Experience</button>
     <button id="playPauseButton">Play/Pause</button>
     <button id="toggleVolumeButton">Toggle Volume</button>
@@ -62,6 +67,8 @@
         let allAudioLoaded = false;
         let audioLoadedCount = 0;
         let isLoud = true;
+
+        let isScaledUp = false; // Initialize the scale toggle variable
 
         const video = document.createElement('video');
         video.crossOrigin = "anonymous";
@@ -216,6 +223,13 @@
         function checkAllLoaded() {
             console.log(`GLB Loaded: ${isGLBLoaded}, Video Loaded: ${isVideoLoaded}, All Audio Loaded: ${allAudioLoaded}`);
             if (isGLBLoaded && isVideoLoaded && allAudioLoaded) {
+                const scaleButton = document.getElementById('scaleButton');
+                if (scaleButton) {
+                    scaleButton.disabled = false;
+                    console.log("Scale Button enabled.");
+                } else {
+                    console.log("Scale Button not found!");
+                }
                 console.log("All assets loaded. Ready to start!");
             }
         }
@@ -258,11 +272,12 @@
         }
 
         function onSessionStarted(session) {
-            session.requestReferenceSpace('local').then(function (referenceSpace) {
-                renderer.xr.setReferenceSpace(referenceSpace);
-                session.requestAnimationFrame(onAnimationFrame);
-            });
-        }
+    session.requestReferenceSpace('local').then(function (referenceSpace) {
+        renderer.xr.setReferenceSpace(referenceSpace);
+        session.requestAnimationFrame(onAnimationFrame);
+        document.getElementById('scaleButton').style.display = 'none'; // Hide the scaleButton in AR
+    });
+}
 
         function onAnimationFrame(time, frame) {
             const referenceSpace = renderer.xr.getReferenceSpace();
@@ -375,6 +390,16 @@
             updatePlayPauseButton();
         }
 
+        function toggleScale() {
+            if (isScaledUp) {
+                sceneParent.scale.set(1, 1, 1); // Scale down to original size
+            } else {
+                sceneParent.scale.set(10, 10, 10); // Scale up
+            }
+            isScaledUp = !isScaledUp;
+            toggleCubeModel(buttonCubes[2], isScaledUp ? 'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/scale-down.glb' : 'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/scale-up.glb'); // Update the model for the scale button
+        }
+
         function toggleVolume() {
             if (isLoud) {
                 nonSpatialAudio.setVolume(0.2);
@@ -382,7 +407,7 @@
                 nonSpatialAudio.setVolume(.7);
             }
             isLoud = !isLoud;
-            toggleCubeModel(buttonCubes[2], isLoud ? 'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/FOH-high.glb' : 'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/FOH-low.glb'); // Update the model for the volume button
+            toggleCubeModel(buttonCubes[3], isLoud ? 'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/FOH-high.glb' : 'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/FOH-low.glb'); // Update the model for the volume button
         }
 
         function startButtonFunctionality() {
@@ -454,24 +479,19 @@
         raycaster = new THREE.Raycaster();
 
         const buttonCubes = [];
-        const cubeColors = [0xff0000, 0x00ff00, 0x0000ff]; // Reduced to 3 colors
+        const cubeColors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00];
 
-for (let i = 0; i < 3; i++) {
-    const cubeGeometry = new THREE.BoxGeometry(0.65, 0.65, 0.65);
-    const cubeMaterial = new THREE.MeshStandardMaterial({ 
-        color: cubeColors[i],
-        transparent: true, // Enable transparency
-        opacity: 0 // Set opacity to 0 to make them invisible
-    });
-    const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
-    const xPos = (i - 1.0) * 0.65;
-    const yPos = 0.8;
-    const zPos = -0.4;
-    cube.position.set(xPos, yPos, zPos);
-    sceneParent.add(cube);
-    buttonCubes.push(cube);
-}
-
+        for (let i = 0; i < 4; i++) {
+            const cubeGeometry = new THREE.BoxGeometry(0.4, 0.4, 0.4);
+            const cubeMaterial = new THREE.MeshStandardMaterial({ color: cubeColors[i] });
+            const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
+            const xPos = (i - 1.5) * 0.45;
+            const yPos = 0.8;
+            const zPos = -0.4;
+            cube.position.set(xPos, yPos, zPos);
+            sceneParent.add(cube);
+            buttonCubes.push(cube);
+        }
 
         const draggableObjects = [draggableCube];
         let selectedObject = null;
@@ -594,6 +614,8 @@ for (let i = 0; i < 3; i++) {
                 stopExperience();
                 startExperience();
             } else if (index === 2) {
+                toggleScale();
+            } else if (index === 3) {
                 toggleVolume();
             }
         }
@@ -627,7 +649,7 @@ for (let i = 0; i < 3; i++) {
         function loadAndAttachGLB(url, parent) {
             loader.load(url, function (gltf) {
                 const model = gltf.scene;
-                model.scale.set(0.65, 0.65, 0.65);
+                model.scale.set(0.5, 0.5, 0.5);
                 parent.add(model);
                 parent.userData.attachedGLB = model;
             }, undefined, function (error) {
@@ -637,10 +659,10 @@ for (let i = 0; i < 3; i++) {
 
         function toggleCubeModel(cube, url) {
             if (cube.userData.attachedGLB) {
-                cube.userData.attachedGLB.visible = !cube.userData.attachedGLB.visible;
-            } else {
-                loadAndAttachGLB(url, cube);
+                cube.remove(cube.userData.attachedGLB);
+                disposeObject(cube.userData.attachedGLB);
             }
+            loadAndAttachGLB(url, cube);
         }
 
         function updatePlayPauseButton() {
@@ -650,19 +672,23 @@ for (let i = 0; i < 3; i++) {
         const glbUrls = [
             'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/btn-play-new.glb',
             'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/restart.glb',
-            'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/FOH-high.glb'
-            // No GLB for the fourth cube, ensuring nothing appears in that position
+            'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/scale-up.glb',
+            'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/FOH-high.glb',
+            'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/nav-sphere.glb'
         ];
 
+        function adjustCubeDimensions(cube) {
+            cube.scale.set(1.5, 1.5, 1.5); // Scale up the AR buttons
+            cube.material.transparent = true;
+            cube.material.opacity = 0;
+        }
+
         buttonCubes.forEach((cube, index) => {
-            if (index < glbUrls.length) {
-                loadAndAttachGLB(glbUrls[index], cube);
-                adjustCubeDimensions(cube);
-            }
+            loadAndAttachGLB(glbUrls[index], cube);
+            adjustCubeDimensions(cube);
         });
 
-        // Load nav-sphere for draggable object if needed
-        loadAndAttachGLB('https://raw.githubusercontent.com/zpennachi/three.js/master/examples/nav-sphere.glb', draggableCube);
+        loadAndAttachGLB(glbUrls[4], draggableCube);
         adjustCubeDimensions(draggableCube);
 
         isPaused = true;
@@ -672,6 +698,9 @@ for (let i = 0; i < 3; i++) {
         document.getElementById('resetButton').addEventListener('click', () => {
             stopExperience();
             startExperience();
+        });
+        document.getElementById('scaleButton').addEventListener('click', () => {
+            toggleScale();
         });
         document.getElementById('toggleVolumeButton').addEventListener('click', () => {
             toggleVolume();
