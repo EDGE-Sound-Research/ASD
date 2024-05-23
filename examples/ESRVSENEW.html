@@ -457,16 +457,16 @@
         const cubeColors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00];
 
         for (let i = 0; i < 3; i++) {
-            const cubeGeometry = new THREE.BoxGeometry(0.4, 0.4, 0.4);
-            const cubeMaterial = new THREE.MeshStandardMaterial({ color: cubeColors[i] });
-            const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
-            const xPos = (i - 1.5) * 0.45;
-            const yPos = 0.8;
-            const zPos = -0.4;
-            cube.position.set(xPos, yPos, zPos);
-            sceneParent.add(cube);
-            buttonCubes.push(cube);
-        }
+    const cubeGeometry = new THREE.BoxGeometry(0.65, 0.65, 0.65);
+    const cubeMaterial = new THREE.MeshStandardMaterial({ color: cubeColors[i] });
+    const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
+    const xPos = (i - 1.5) * 0.45 + 1.5; // Adjust the x position to align with the video panel
+    const yPos = 0.8;
+    const zPos = -0.4;
+    cube.position.set(xPos, yPos, zPos);
+    sceneParent.add(cube);
+    buttonCubes.push(cube);
+}
 
         const draggableObjects = [draggableCube];
         let selectedObject = null;
@@ -619,46 +619,39 @@
             renderer.render(scene, camera);
         });
 
-        function loadAndAttachGLB(url, parent) {
-            loader.load(url, function (gltf) {
-                const model = gltf.scene;
-                model.scale.set(0.5, 0.5, 0.5);
-                parent.add(model);
-                parent.userData.attachedGLB = model;
-            }, undefined, function (error) {
-                console.error('An error happened during the loading of the GLB:', error);
-            });
-        }
+        function loadAndAttachGLB(url, parent, scale = 1) {
+    loader.load(url, function (gltf) {
+        const model = gltf.scene;
+        model.scale.set(scale, scale, scale);
+        parent.add(model);
+        parent.userData.attachedGLB = model;
+    }, undefined, function (error) {
+        console.error('An error happened during the loading of the GLB:', error);
+    });
+}
 
-        function toggleCubeModel(cube, url) {
-            if (cube.userData.attachedGLB) {
-                cube.remove(cube.userData.attachedGLB);
-                disposeObject(cube.userData.attachedGLB);
-            }
-            loadAndAttachGLB(url, cube);
-        }
+function toggleCubeModel(cube, url, scale = 1) {
+    if (cube.userData.attachedGLB) {
+        cube.remove(cube.userData.attachedGLB);
+        disposeObject(cube.userData.attachedGLB);
+    }
+    loadAndAttachGLB(url, cube, scale);
+}
 
-        function updatePlayPauseButton() {
-            toggleCubeModel(buttonCubes[0], isPaused ? 'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/btn-play-new.glb' : 'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/pause.glb');
-        }
+// Call the function with the desired scale
+const glbUrls = [
+    'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/btn-play-new.glb',
+    'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/restart.glb',
+    'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/FOH-high.glb'
+];
 
-        const glbUrls = [
-            'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/btn-play-new.glb',
-            'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/restart.glb',
-            'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/FOH-high.glb',
-            'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/nav-sphere.glb'
-        ];
+const scaleFactor = 1.5; // Adjust this value to increase the size of the GLB files
 
-        function adjustCubeDimensions(cube) {
-            cube.scale.set(1, 1, 1);
-            cube.material.transparent = true;
-            cube.material.opacity = 0;
-        }
+buttonCubes.forEach((cube, index) => {
+    loadAndAttachGLB(glbUrls[index], cube, scaleFactor);
+    adjustCubeDimensions(cube);
+});
 
-        buttonCubes.forEach((cube, index) => {
-            loadAndAttachGLB(glbUrls[index], cube);
-            adjustCubeDimensions(cube);
-        });
 
         loadAndAttachGLB(glbUrls[3], draggableCube);
         adjustCubeDimensions(draggableCube);
