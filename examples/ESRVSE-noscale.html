@@ -1,5 +1,3 @@
-<!DOCTYPE html>
-<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -23,90 +21,101 @@
         #resetButton {
             top: 10px;
             left: 10px;
-			display: none;
+            display: none;
         }
         #playPauseButton {
             top: 50px;
             left: 10px;
-			display: none;
+            display: none;
         }
         #toggleVolumeButton {
             top: 90px;
             left: 10px;
-			display: none;
+            display: none;
+        }
+        .xr-button {
+            width: 150px;
+            height: 50px;
+            font-size: 20px;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 2; /* Ensure it is on top of other elements */
         }
     </style>
 </head>
-<body>
-    <button id="resetButton">Reset Experience</button>
-    <button id="playPauseButton">Play/Pause</button>
-    <button id="toggleVolumeButton">Toggle Volume</button>
-    <script type="module">
-        import * as THREE from 'three';
-        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-        import { XRButton } from 'three/addons/webxr/XRButton.js';
-        import { XRHandModelFactory } from 'three/addons/webxr/XRHandModelFactory.js';
-        import { XRControllerModelFactory } from 'three/addons/webxr/XRControllerModelFactory.js';
+html
+Copy code
+<script type="module">
+    import * as THREE from 'three';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+    import { XRButton } from 'three/addons/webxr/XRButton.js';
+    import { XRHandModelFactory } from 'three/addons/webxr/XRHandModelFactory.js';
+    import { XRControllerModelFactory } from 'three/addons/webxr/XRControllerModelFactory.js';
 
-        let camera, scene, renderer;
-        let controller1, controller2;
-        let controllerGrip1, controllerGrip2;
-        let raycaster;
-        const intersected = [];
-        let court, mixer;
-        const audioSources = [];
-        const clock = new THREE.Clock();
-        let experienceTimer;
-        const totalDuration = 120;
-        let isPaused = true;
+    let camera, scene, renderer;
+    let controller1, controller2;
+    let controllerGrip1, controllerGrip2;
+    let raycaster;
+    const intersected = [];
+    let court, mixer;
+    const audioSources = [];
+    const clock = new THREE.Clock();
+    let experienceTimer;
+    const totalDuration = 120;
+    let isPaused = true;
 
-        let isGLBLoaded = false;
-        let isVideoLoaded = false;
-        let allAudioLoaded = false;
-        let audioLoadedCount = 0;
-        let isLoud = true;
+    let isGLBLoaded = false;
+    let isVideoLoaded = false;
+    let allAudioLoaded = false;
+    let audioLoadedCount = 0;
+    let isLoud = true;
 
-        const video = document.createElement('video');
-        video.crossOrigin = "anonymous";
-        video.preload = 'auto';
-        video.load();
-        video.muted = true;
+    const video = document.createElement('video');
+    video.crossOrigin = "anonymous";
+    video.preload = 'auto';
+    video.load();
+    video.muted = true;
 
-        const videoTexture = new THREE.VideoTexture(video);
-        videoTexture.minFilter = THREE.LinearFilter;
-        videoTexture.magFilter = THREE.LinearFilter;
-        videoTexture.format = THREE.RGBAFormat;
+    const videoTexture = new THREE.VideoTexture(video);
+    videoTexture.minFilter = THREE.LinearFilter;
+    videoTexture.magFilter = THREE.LinearFilter;
+    videoTexture.format = THREE.RGBAFormat;
 
-        const videoScreen = new THREE.Mesh(
-            new THREE.PlaneGeometry(4, 2.25),
-            new THREE.MeshBasicMaterial({ map: videoTexture, side: THREE.DoubleSide })
-        );
-        videoScreen.position.set(0, .4, -.4);
-        videoScreen.rotation.y = Math.PI;
-        videoScreen.scale.set(-.3, .3, .3);
+    const videoScreen = new THREE.Mesh(
+        new THREE.PlaneGeometry(4, 2.25),
+        new THREE.MeshBasicMaterial({ map: videoTexture, side: THREE.DoubleSide })
+    );
+    videoScreen.position.set(0, .4, -.4);
+    videoScreen.rotation.y = Math.PI;
+    videoScreen.scale.set(-.3, .3, .3);
 
-        const sceneParent = new THREE.Group();
-        scene = new THREE.Scene();
-        scene.add(sceneParent);
+    const sceneParent = new THREE.Group();
+    scene = new THREE.Scene();
+    scene.add(sceneParent);
 
-        const initialCubePosition = new THREE.Vector3(0, 0, 0);
-        const draggableCubeGeometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
-        const draggableCubeMaterial = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
-        const draggableCube = new THREE.Mesh(draggableCubeGeometry, draggableCubeMaterial);
-        draggableCube.position.copy(initialCubePosition);
-        scene.add(draggableCube);
-        sceneParent.position.copy(initialCubePosition);
-        sceneParent.add(videoScreen);
+    const initialCubePosition = new THREE.Vector3(0, 0, 0);
+    const draggableCubeGeometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
+    const draggableCubeMaterial = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
+    const draggableCube = new THREE.Mesh(draggableCubeGeometry, draggableCubeMaterial);
+    draggableCube.position.copy(initialCubePosition);
+    scene.add(draggableCube);
+    sceneParent.position.copy(initialCubePosition);
+    sceneParent.add(videoScreen);
 
-        renderer = new THREE.WebGLRenderer({ alpha: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        document.body.appendChild(renderer.domElement);
+    renderer = new THREE.WebGLRenderer({ alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
 
-        const listener = new THREE.AudioListener();
-        camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 1000);
-        renderer.xr.setReferenceSpaceType('local-floor');
-        renderer.xr.enabled = true;
-        document.body.appendChild(XRButton.createButton(renderer, { requiredFeatures: ['hit-test', 'hand-tracking'] }));
+    const listener = new THREE.AudioListener();
+    camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 1000);
+    renderer.xr.setReferenceSpaceType('local-floor');
+    renderer.xr.enabled = true;
+    const xrButton = XRButton.createButton(renderer, { requiredFeatures: ['hit-test', 'hand-tracking'] });
+    xrButton.classList.add('xr-button'); // Add the CSS class to the XR button
+    document.body.appendChild(xrButton);
+
         scene.background = null;
 
         const initialCameraPosition = new THREE.Vector3(0, 2, 6);
