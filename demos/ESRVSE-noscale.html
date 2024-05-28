@@ -23,14 +23,17 @@
         #resetButton {
             top: 10px;
             left: 10px;
+			display: none;
         }
         #playPauseButton {
             top: 50px;
             left: 10px;
+			display: none;
         }
         #toggleVolumeButton {
             top: 90px;
             left: 10px;
+			display: none;
         }
     </style>
 </head>
@@ -44,7 +47,6 @@
         import { XRButton } from 'three/addons/webxr/XRButton.js';
         import { XRHandModelFactory } from 'three/addons/webxr/XRHandModelFactory.js';
         import { XRControllerModelFactory } from 'three/addons/webxr/XRControllerModelFactory.js';
-
         let camera, scene, renderer;
         let controller1, controller2;
         let controllerGrip1, controllerGrip2;
@@ -56,24 +58,20 @@
         let experienceTimer;
         const totalDuration = 120;
         let isPaused = true;
-
         let isGLBLoaded = false;
         let isVideoLoaded = false;
         let allAudioLoaded = false;
         let audioLoadedCount = 0;
         let isLoud = true;
-
         const video = document.createElement('video');
         video.crossOrigin = "anonymous";
         video.preload = 'auto';
         video.load();
         video.muted = true;
-
         const videoTexture = new THREE.VideoTexture(video);
         videoTexture.minFilter = THREE.LinearFilter;
         videoTexture.magFilter = THREE.LinearFilter;
         videoTexture.format = THREE.RGBAFormat;
-
         const videoScreen = new THREE.Mesh(
             new THREE.PlaneGeometry(4, 2.25),
             new THREE.MeshBasicMaterial({ map: videoTexture, side: THREE.DoubleSide })
@@ -81,11 +79,9 @@
         videoScreen.position.set(0, .4, -.4);
         videoScreen.rotation.y = Math.PI;
         videoScreen.scale.set(-.3, .3, .3);
-
         const sceneParent = new THREE.Group();
         scene = new THREE.Scene();
         scene.add(sceneParent);
-
         const initialCubePosition = new THREE.Vector3(0, 0, 0);
         const draggableCubeGeometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
         const draggableCubeMaterial = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
@@ -94,25 +90,21 @@
         scene.add(draggableCube);
         sceneParent.position.copy(initialCubePosition);
         sceneParent.add(videoScreen);
-
         renderer = new THREE.WebGLRenderer({ alpha: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
-
         const listener = new THREE.AudioListener();
         camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 1000);
         renderer.xr.setReferenceSpaceType('local-floor');
         renderer.xr.enabled = true;
         document.body.appendChild(XRButton.createButton(renderer, { requiredFeatures: ['hit-test', 'hand-tracking'] }));
         scene.background = null;
-
         const initialCameraPosition = new THREE.Vector3(0, 2, 6);
         const initialCameraRotation = new THREE.Euler(0, THREE.MathUtils.degToRad(0), 0);
         camera.position.copy(initialCameraPosition);
         camera.rotation.copy(initialCameraRotation);
         camera.updateProjectionMatrix();
         camera.add(listener);
-
         function preloadVideo(url) {
             const req = new XMLHttpRequest();
             req.open('GET', url, true);
@@ -130,7 +122,6 @@
             };
             req.send();
         }
-
         preloadVideo('https://dl.dropboxusercontent.com/scl/fi/9upajrftohbrvahzpli5i/NBA_AllStar_Demo_Clip-compress.mp4?rlkey=jceoyzehubnlrku5v0puv0bf6&st=9yhuvs3v&dl=1');
         const audioUrls = [
             'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/Ball_Stem.mp3',
@@ -145,27 +136,23 @@
         ];
         const modelIDs = ['1', '2', '3', '4', '5', '6', '7', 'basket1', 'basket2'];
         const audioLoader = new THREE.AudioLoader();
-
         const loader = new GLTFLoader();
         loader.load('https://raw.githubusercontent.com/zpennachi/three.js/master/examples/nba-as-final.glb', function (gltf) {
             court = gltf.scene;
             court.scale.set(0.1, 0.1, 0.1);
             court.position.set(0, 0, 0);
             sceneParent.add(court);
-
             mixer = new THREE.AnimationMixer(court);
             gltf.animations.forEach((clip) => {
                 const action = mixer.clipAction(clip);
                 action.paused = true;
                 action.play();
             });
-
             court.traverse((child) => {
                 if (child.isMesh && child.material) {
                     if (child.name === 'courtPlane') {
                         child.material = new THREE.MeshStandardMaterial({ map: videoTexture });
                     }
-
                     const index = modelIDs.indexOf(child.name);
                     if (index !== -1) {
                         audioLoader.load(audioUrls[index], (buffer) => {
@@ -187,16 +174,13 @@
                     }
                 }
             });
-
             draggableCube.position.copy(initialCubePosition);
             sceneParent.position.copy(initialCubePosition);
-
             isGLBLoaded = true;
             checkAllLoaded();
         }, undefined, function (error) {
             console.error('An error happened during the loading of the GLB:', error);
         });
-
         const nonSpatialAudioUrl = 'https://raw.githubusercontent.com/zpennachi/ESR-VSE_DEMO/main/AllStar_Game_FOH.mp3';
         const nonSpatialAudio = new THREE.Audio(listener);
         const nonSpatialAudioLoader = new THREE.AudioLoader();
@@ -206,20 +190,17 @@
             listener.add(nonSpatialAudio);
             audioSources.push(nonSpatialAudio);
         });
-
         const ambientLight = new THREE.AmbientLight(0xffffff, 1);
         scene.add(ambientLight);
         const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
         directionalLight.position.set(0, 20, 10);
         scene.add(directionalLight);
-
         function checkAllLoaded() {
             console.log(`GLB Loaded: ${isGLBLoaded}, Video Loaded: ${isVideoLoaded}, All Audio Loaded: ${allAudioLoaded}`);
             if (isGLBLoaded && isVideoLoaded && allAudioLoaded) {
                 console.log("All assets loaded. Ready to start!");
             }
         }
-
         video.addEventListener('canplaythrough', () => {
             isVideoLoaded = true;
             checkAllLoaded();
@@ -228,7 +209,6 @@
             isVideoLoaded = true;
             checkAllLoaded();
         }
-
         function disposeObject(obj) {
             if (obj.geometry) obj.geometry.dispose();
             if (obj.material) {
@@ -240,7 +220,6 @@
             }
             if (obj.texture) obj.texture.dispose();
         }
-
         function animate() {
             renderer.setAnimationLoop(() => {
                 const delta = clock.getDelta();
@@ -256,14 +235,12 @@
                 renderer.render(scene, camera);
             });
         }
-
         function onSessionStarted(session) {
             session.requestReferenceSpace('local').then(function (referenceSpace) {
                 renderer.xr.setReferenceSpace(referenceSpace);
                 session.requestAnimationFrame(onAnimationFrame);
             });
         }
-
         function onAnimationFrame(time, frame) {
             const referenceSpace = renderer.xr.getReferenceSpace();
             const viewerPose = frame.getViewerPose(referenceSpace);
@@ -281,15 +258,12 @@
             renderer.render(scene, camera);
             frame.session.requestAnimationFrame(onAnimationFrame);
         }
-
         renderer.xr.addEventListener('sessionstart', onSessionStarted);
-
         function onWindowResize() {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         }
-
         function stopExperience() {
             if (mixer) {
                 mixer.stopAllAction();
@@ -311,45 +285,37 @@
             enablePlayPauseButton();
             enableResetButton();
         }
-
         function startExperience() {
             clearTimeout(experienceTimer);
             experienceTimer = setTimeout(stopExperience, totalDuration * 1000);
-
             if (mixer) {
                 mixer._actions.forEach(action => {
                     action.paused = false;
                     action.play();
                 });
             }
-
             audioSources.forEach(audio => {
                 audio.stop();
                 audio.play();
             });
-
             video.play();
             isPaused = false;
             updatePlayPauseButton();
             animate();
             enablePlayPauseButton();
         }
-
         function enablePlayPauseButton() {
             const playPauseButton = document.getElementById('playPauseButton');
             playPauseButton.disabled = false;
         }
-
         function disablePlayPauseButton() {
             const playPauseButton = document.getElementById('playPauseButton');
             playPauseButton.disabled = true;
         }
-
         function enableResetButton() {
             const resetButton = document.getElementById('resetButton');
             resetButton.disabled = false;
         }
-
         function togglePlayPause() {
             if (isPaused) {
                 mixer._actions.forEach(action => {
@@ -374,7 +340,6 @@
             isPaused = !isPaused;
             updatePlayPauseButton();
         }
-
         function toggleVolume() {
             if (isLoud) {
                 nonSpatialAudio.setVolume(0.2);
@@ -384,12 +349,10 @@
             isLoud = !isLoud;
             toggleCubeModel(buttonCubes[2], isLoud ? 'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/FOH-high.glb' : 'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/FOH-low.glb'); // Update the model for the volume button
         }
-
         function startButtonFunctionality() {
             document.querySelectorAll('.startButton').forEach(button => {
                 button.style.display = 'none';
             });
-
             const audioContext = THREE.AudioContext.getContext();
             if (audioContext.state === 'suspended') {
                 audioContext.resume().then(() => {
@@ -411,55 +374,44 @@
                 });
                 video.play();
             }
-
             startExperience();
         }
-
         const controllerModelFactory = new XRControllerModelFactory();
         controller1 = renderer.xr.getController(0);
         controller1.addEventListener('selectstart', onSelectStart);
         controller1.addEventListener('selectend', onSelectEnd);
         scene.add(controller1);
-
         controller2 = renderer.xr.getController(1);
         controller2.addEventListener('selectstart', onSelectStart);
         controller2.addEventListener('selectend', onSelectEnd);
         scene.add(controller2);
-
         controllerGrip1 = renderer.xr.getControllerGrip(0);
         controllerGrip1.add(controllerModelFactory.createControllerModel(controllerGrip1));
         scene.add(controllerGrip1);
-
         controllerGrip2 = renderer.xr.getControllerGrip(1);
         controllerGrip2.add(controllerModelFactory.createControllerModel(controllerGrip2));
         scene.add(controllerGrip2);
-
         const handModelFactory = new XRHandModelFactory();
         const hand1 = renderer.xr.getHand(0);
         hand1.add(handModelFactory.createHandModel(hand1));
         scene.add(hand1);
-
         const hand2 = renderer.xr.getHand(1);
         hand2.add(handModelFactory.createHandModel(hand2));
         scene.add(hand2);
-
         const geometry2 = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -1)]);
         const line = new THREE.Line(geometry2);
         line.name = 'line';
         line.scale.z = 5;
-
         controller1.add(line.clone());
         controller2.add(line.clone());
-
         raycaster = new THREE.Raycaster();
-
         const buttonCubes = [];
         const cubeColors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00];
-
         for (let i = 0; i < 3; i++) {
             const cubeGeometry = new THREE.BoxGeometry(0.4, 0.4, 0.4);
             const cubeMaterial = new THREE.MeshStandardMaterial({ color: cubeColors[i] });
             const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
+            const xPos = (i - 1.5) * 0.45;
             const xPos = (i - 1) * 0.45;
             const yPos = 0.8;
             const zPos = -0.4;
@@ -467,12 +419,10 @@
             sceneParent.add(cube);
             buttonCubes.push(cube);
         }
-
         const draggableObjects = [draggableCube];
         let selectedObject = null;
         let initialParentPosition = new THREE.Vector3();
         initialCubePosition.copy(draggableCube.position);
-
         function getIntersections(controller) {
             const tempMatrix = new THREE.Matrix4();
             tempMatrix.identity().extractRotation(controller.matrixWorld);
@@ -480,66 +430,52 @@
             raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
             return raycaster.intersectObjects([...draggableObjects, ...buttonCubes], false);
         }
-
         function onSelectStart(event) {
             const controller = event.target;
             const intersections = getIntersections(controller);
-
             if (intersections.length > 0) {
                 const intersection = intersections[0];
                 const object = intersection.object;
-
                 if (object.userData.isButton) {
                     object.userData.select();
                     return;
                 }
-
                 object.material.emissive.setHex(0xaaaaaa);
                 controller.attach(object);
                 controller.userData.selected = object;
                 selectedObject = object;
-
                 initialParentPosition.copy(sceneParent.position);
                 initialCubePosition.copy(draggableCube.position);
             }
-
             controller.userData.targetRayMode = event.data.targetRayMode;
         }
-
         function onSelectEnd(event) {
             const controller = event.target;
-
             if (controller.userData.selected !== undefined) {
                 const object = controller.userData.selected;
                 object.material.emissive.setHex(0x000000);
                 scene.attach(object);
                 controller.userData.selected = undefined;
-
                 if (object === draggableCube) {
                     const newCubePosition = draggableCube.position.clone();
                     sceneParent.position.copy(newCubePosition);
                     initialCubePosition.copy(newCubePosition);
                     initialParentPosition.copy(sceneParent.position);
                 }
-
                 selectedObject = null;
             }
         }
-
         function intersectObjects(controller) {
             if (controller.userData.targetRayMode === 'screen') return;
             if (controller.userData.selected !== undefined) return;
-
             const line = controller.getObjectByName('line');
             const intersections = getIntersections(controller);
-
             if (intersections.length > 0) {
                 const intersection = intersections[0];
                 const object = intersection.object;
                 object.material.emissive.setHex(0xff0000);
                 intersected.push(object);
                 line.scale.z = intersection.distance;
-
                 if (object.userData.isButton) {
                     object.userData.hoverStart();
                 }
@@ -547,18 +483,15 @@
                 line.scale.z = 5;
             }
         }
-
         function cleanIntersected() {
             while (intersected.length) {
                 const object = intersected.pop();
                 object.material.emissive.setHex(0x000000);
-
                 if (object.userData.isButton) {
                     object.userData.hoverEnd();
                 }
             }
         }
-
         function onButtonCubeHoverStart(cube) {
             cube.material.emissive.setHex(0xff0000);
             if (cube.userData.attachedGLB) {
@@ -569,7 +502,6 @@
                 });
             }
         }
-
         function onButtonCubeHoverEnd(cube) {
             cube.material.emissive.setHex(0x000000);
             if (cube.userData.attachedGLB) {
@@ -580,7 +512,6 @@
                 });
             }
         }
-
         function onButtonCubeSelect(cube) {
             const index = buttonCubes.indexOf(cube);
             if (index === 0) {
@@ -592,7 +523,6 @@
                 toggleVolume();
             }
         }
-
         function addButtonCubeInteractions() {
             buttonCubes.forEach(cube => {
                 cube.userData.isButton = true;
@@ -601,9 +531,7 @@
                 cube.userData.select = () => onButtonCubeSelect(cube);
             });
         }
-
         addButtonCubeInteractions();
-
         renderer.setAnimationLoop(() => {
             const delta = clock.getDelta();
             if (!isPaused && mixer) {
@@ -615,13 +543,12 @@
             cleanIntersected();
             intersectObjects(controller1);
             intersectObjects(controller2);
-
             renderer.render(scene, camera);
         });
-
         function loadAndAttachGLB(url, parent) {
             loader.load(url, function (gltf) {
                 const model = gltf.scene;
+                model.scale.set(0.5, 0.5, 0.5);
                 model.scale.set(0.75, 0.75, 0.75);
                 parent.add(model);
                 parent.userData.attachedGLB = model;
@@ -629,7 +556,6 @@
                 console.error('An error happened during the loading of the GLB:', error);
             });
         }
-
         function toggleCubeModel(cube, url) {
             if (cube.userData.attachedGLB) {
                 cube.remove(cube.userData.attachedGLB);
@@ -637,35 +563,28 @@
             }
             loadAndAttachGLB(url, cube);
         }
-
         function updatePlayPauseButton() {
             toggleCubeModel(buttonCubes[0], isPaused ? 'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/btn-play-new.glb' : 'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/pause.glb');
         }
-
         const glbUrls = [
             'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/btn-play-new.glb',
             'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/restart.glb',
             'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/FOH-high.glb',
             'https://raw.githubusercontent.com/zpennachi/three.js/master/examples/nav-sphere.glb'
         ];
-
         function adjustCubeDimensions(cube) {
             cube.scale.set(1, 1, 1);
             cube.material.transparent = true;
             cube.material.opacity = 0;
         }
-
         buttonCubes.forEach((cube, index) => {
             loadAndAttachGLB(glbUrls[index], cube);
             adjustCubeDimensions(cube);
         });
-
         loadAndAttachGLB(glbUrls[3], draggableCube);
         adjustCubeDimensions(draggableCube);
-
         isPaused = true;
         updatePlayPauseButton();
-
         document.getElementById('playPauseButton').addEventListener('click', togglePlayPause);
         document.getElementById('resetButton').addEventListener('click', () => {
             stopExperience();
@@ -674,13 +593,11 @@
         document.getElementById('toggleVolumeButton').addEventListener('click', () => {
             toggleVolume();
         });
-
         document.addEventListener('visibilitychange', function () {
             if (document.hidden) {
                 stopExperience();
             }
         });
-
         window.addEventListener('resize', onWindowResize, false);
     </script>
 </body>
