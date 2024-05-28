@@ -10,40 +10,44 @@
             }
         }
     </script>
-    <style>
-        button {
-            position: fixed;
-            z-index: 1;
-            padding: 10px;
-            font-size: 16px;
-            cursor: pointer;
-        }
-        #resetButton {
-            top: 10px;
-            left: 10px;
-            display: none;
-        }
-        #playPauseButton {
-            top: 50px;
-            left: 10px;
-            display: none;
-        }
-        #toggleVolumeButton {
-            top: 90px;
-            left: 10px;
-            display: none;
-        }
-        .xr-button {
-            width: 150px;
-            height: 50px;
-            font-size: 20px;
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 2; 
-        }
-    </style>
+  <style>
+    button {
+        position: fixed;
+        z-index: 1;
+        padding: 10px;
+        font-size: 16px;
+        cursor: pointer;
+    }
+    #resetButton {
+        top: 10px;
+        left: 10px;
+        display: none;
+    }
+    #playPauseButton {
+        top: 50px;
+        left: 10px;
+        display: none;
+    }
+    #toggleVolumeButton {
+        top: 90px;
+        left: 10px;
+        display: none;
+    }
+    .xr-button {
+        width: 150px;
+        height: 50px;
+        font-size: 20px;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 2;
+    }
+    body {
+        margin: 0;
+        overflow: hidden;
+    }
+</style>
 </head>
 
 <script type="module">
