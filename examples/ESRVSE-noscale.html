@@ -13,10 +13,28 @@
         }
     </script>
     <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #000;
+        }
         button {
             display: none;
         }
-  .webxr-button {
+        #xr-button-container {
+            position: absolute;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+        }
+        #enter-xr-button {
             font-size: 24px;
             padding: 20px;
             background-color: #fff;
@@ -24,12 +42,12 @@
             border-radius: 5px;
             cursor: pointer;
         }
-        #resetButton, #playPauseButton, #toggleVolumeButton {
-            display: none;
-        }
     </style>
 </head>
 <body>
+    <div id="xr-button-container">
+        <button id="enter-xr-button">Enter AR Experience</button>
+    </div>
     <button id="resetButton">Reset Experience</button>
     <button id="playPauseButton">Play/Pause</button>
     <button id="toggleVolumeButton">Toggle Volume</button>
@@ -98,7 +116,8 @@
         camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 1000);
         renderer.xr.setReferenceSpaceType('local-floor');
         renderer.xr.enabled = true;
-        document.body.appendChild(XRButton.createButton(renderer, { requiredFeatures: ['hit-test', 'hand-tracking'] }));
+        const xrButton = XRButton.createButton(renderer, { requiredFeatures: ['hit-test', 'hand-tracking'] });
+        document.getElementById('xr-button-container').appendChild(xrButton);
         scene.background = null;
 
         const initialCameraPosition = new THREE.Vector3(0, 2, 6);
